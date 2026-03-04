@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECHO — Jeu de Cartes Social</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & BASE ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#0a0a0a;--bg1:#111;--bg2:#181818;--bg3:#222;
+  --orange:#f97316;--orange-dim:#c2550f;--orange-glow:rgba(249,115,22,.35);
+  --white:#f0f0f0;--gold:#f5c518;--green:#22c55e;--blue:#3b82f6;--purple:#a855f7;--red:#ef4444;
+  --border:#2a2a2a;--border-b:#3a3a3a;
+  --text:#f0f0f0;--dim:#808080;--faint:#333;
+}
+html,body{width:100%;min-height:100%;overflow-x:hidden;background:var(--bg0);color:var(--white);font-family:'Barlow',sans-serif}
+input,button,select{font-family:'Barlow',sans-serif}
+input::placeholder{color:var(--faint)}
+input:focus{outline:none}
+button{cursor:pointer;border:none;background:none}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--orange);border-radius:2px}
+
+/* ── GRID BG ── */
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.032;
+  background-image:linear-gradient(var(--border-b) 1px,transparent 1px),linear-gradient(90deg,var(--border-b) 1px,transparent 1px);
+  background-size:28px 28px}
+
+/* ── TOP LINE ── */
+.top-line{position:fixed;top:0;left:0;right:0;height:3px;background:var(--orange);z-index:200}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100dvh;position:relative;z-index:1}
+.screen.active{display:flex;flex-direction:column}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes slideT{from{opacity:0;transform:translateX(-50%) translateY(-14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.anim-up{animation:fadeUp .28s ease}
+.anim-pop{animation:popIn .3s cubic-bezier(.175,.885,.32,1.275)}
+.pulse{animation:pulse .9s step-end infinite}
+
+/* ── BUTTONS ── */
+.btn{position:relative;overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-weight:800;letter-spacing:.04em;transition:all .14s;border-radius:3px;border:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn::before{content:'';position:absolute;inset:0;transform:translateX(-101%);transition:transform .18s cubic-bezier(.4,0,.2,1)}
+.btn:hover::before{transform:translateX(0)}
+.btn:active{transform:scale(.97)}
+.btn > *{position:relative;z-index:1}
+.btn-orange{background:var(--orange);color:#fff}.btn-orange::before{background:var(--orange-dim)}
+.btn-ghost{background:transparent;border:1.5px solid var(--border-b);color:var(--dim)}.btn-ghost:hover{border-color:var(--orange);color:var(--white)}.btn-ghost::before{background:rgba(249,115,22,.1)}
+.btn-outline{background:transparent;border:1.5px solid var(--orange);color:var(--orange)}.btn-outline:hover{color:#fff}.btn-outline::before{background:var(--orange)}
+.btn-back{background:transparent;border:1.5px solid var(--border);color:var(--dim);font-size:clamp(.68rem,2.1vw,.78rem);padding:7px 13px;border-radius:3px;font-weight:700;transition:all .14s;display:flex;align-items:center;gap:6px}
+.btn-back:hover{border-color:var(--orange);color:var(--orange)}
+.btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+
+/* ── PANEL ── */
+.panel{background:var(--bg1);border:1px solid var(--border);border-radius:3px;position:relative}
+.panel::before{content:'';position:absolute;top:-1px;left:16px;width:32px;height:2px;background:var(--orange)}
+
+/* ── TAGS ── */
+.tag{font-family:'DM Mono',monospace;font-size:clamp(.42rem,1.3vw,.56rem);letter-spacing:.1em;text-transform:uppercase;padding:2px 9px;border-radius:2px;display:inline-block}
+.ms{font-family:'DM Mono',monospace;font-size:clamp(.42rem,1.3vw,.54rem);color:var(--dim);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
+
+/* ── TOAST ── */
+#toast{position:fixed;top:clamp(12px,3vw,20px);left:50%;transform:translateX(-50%);z-index:9999;background:var(--bg1);border:1.5px solid var(--orange);padding:9px 22px;font-family:'DM Mono',monospace;font-size:clamp(.65rem,2vw,.78rem);font-weight:700;color:var(--orange);letter-spacing:.05em;white-space:nowrap;box-shadow:0 0 22px var(--orange-glow);animation:slideT .2s ease;pointer-events:none;border-radius:3px}
+#toast.hidden{display:none}
+
+/* ── WELCOME ── */
+#screen-welcome{align-items:center;justify-content:center;padding:clamp(14px,3.5vw,36px)}
+.welcome-inner{position:relative;z-index:1;max-width:500px;width:100%;animation:fadeUp .38s ease}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,14vw,7rem);color:var(--orange);letter-spacing:.08em;line-height:.9;text-shadow:0 0 40px var(--orange-glow);text-align:center}
+.logo-sub{font-family:'DM Mono',monospace;font-size:clamp(.48rem,1.6vw,.62rem);color:var(--dim);letter-spacing:.4em;margin-top:4px;text-align:center}
+.stats-row{display:flex;gap:clamp(6px,1.5vw,10px);margin-bottom:clamp(16px,4vw,24px)}
+.stat-box{flex:1;background:var(--bg2);border:1px solid var(--border);padding:clamp(8px,2.5vw,14px) 4px;text-align:center}
+.stat-n{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,4.5vw,2rem);color:var(--orange)}
+.stat-l{font-family:'DM Mono',monospace;font-size:clamp(.38rem,1.2vw,.52rem);color:var(--dim);letter-spacing:.12em}
+.setup-panel{background:var(--bg1);border:1px solid var(--border);padding:clamp(14px,3.5vw,22px);margin-bottom:10px}
+.input-text{width:100%;padding:clamp(9px,2.5vw,12px) 12px;background:var(--bg3);border:1.5px solid var(--border);color:var(--white);font-size:clamp(.78rem,2.4vw,.9rem);border-radius:3px;margin-bottom:14px;box-sizing:border-box;transition:border-color .14s}
+.input-text:focus{border-color:var(--orange)}
+.icon-grid{display:flex;gap:clamp(5px,1.3vw,8px);flex-wrap:wrap;margin-bottom:14px}
+.icon-btn{width:clamp(32px,8vw,42px);height:clamp(32px,8vw,42px);background:var(--bg3);border:1.5px solid var(--border);border-radius:3px;font-size:clamp(.95rem,3.2vw,1.35rem);display:flex;align-items:center;justify-content:center;transition:all .12s;cursor:pointer}
+.icon-btn.active{background:rgba(249,115,22,.15);border-color:var(--orange)}
+.mode-grid{display:flex;flex-direction:column;gap:8px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* sub-screens inside welcome */
+.sub-screen{display:none}.sub-screen.active{display:block;animation:fadeUp .25s ease}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.diff-btn{padding:clamp(10px,2.5vw,14px) 10px;background:var(--bg3);border:1.5px solid var(--border);color:var(--dim);cursor:pointer;transition:all .12s;text-align:left;border-radius:3px}
+.diff-btn.active{border-color:var(--orange);background:rgba(249,115,22,.1);color:var(--orange)}
+.diff-name{font-size:clamp(.6rem,1.9vw,.72rem);font-weight:800}
+.diff-sub{font-size:clamp(.52rem,1.5vw,.62rem);color:var(--dim);margin-top:2px}
+.np-row{display:flex;gap:8px;margin-bottom:14px}
+.np-btn{flex:1;padding:clamp(8px,2vw,11px);background:var(--bg3);border:1.5px solid var(--border);color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:clamp(.85rem,3vw,1.1rem);cursor:pointer;transition:all .12s;border-radius:3px}
+.np-btn.active{background:rgba(249,115,22,.15);border-color:var(--orange);color:var(--orange)}
+.player-row{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.player-icon{font-size:1rem;flex-shrink:0;width:24px;text-align:center}
+.code-display{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,10vw,4rem);color:var(--gold);letter-spacing:.5em;text-shadow:0 0 20px rgba(245,197,24,.4);text-align:center;margin:10px 0}
+.room-players{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.room-player{display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--faint);padding:8px 13px;border-radius:3px}
+.code-input{width:100%;padding:clamp(10px,2.5vw,14px) 13px;background:var(--bg3);border:1.5px solid var(--border);color:var(--gold);font-size:clamp(.88rem,3vw,1.1rem);border-radius:3px;letter-spacing:.3em;text-align:center;font-family:'Bebas Neue',sans-serif;box-sizing:border-box}
+.error-msg{font-size:clamp(.62rem,1.9vw,.72rem);color:var(--orange);margin-top:4px}
+
+/* ── MANUAL ── */
+#screen-manual{overflow:auto}
+.manual-top{position:sticky;top:0;z-index:10;background:rgba(10,10,10,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:clamp(10px,2.5vw,16px) clamp(14px,3.5vw,24px);display:flex;align-items:center;gap:14px}
+.manual-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.3rem,5vw,2rem);color:var(--orange);letter-spacing:.12em}
+.manual-body{max-width:700px;margin:0 auto;padding:clamp(20px,5vw,40px) clamp(14px,3.5vw,24px)}
+.manual-section{border-left:3px solid var(--orange);padding-left:14px;margin-bottom:22px}
+.manual-section h3{font-family:'Bebas Neue',sans-serif;font-size:clamp(1rem,3.5vw,1.3rem);color:var(--orange);letter-spacing:.1em;margin-bottom:8px}
+.manual-section p,.manual-section li{font-size:clamp(.75rem,2.3vw,.88rem);color:var(--dim);line-height:1.65}
+.manual-section ul{padding-left:18px}.manual-section li{margin-bottom:5px}
+.type-chip{font-family:'DM Mono',monospace;font-size:clamp(.42rem,1.3vw,.55rem);padding:3px 10px;border-radius:2px;display:inline-block;margin:3px}
+
+/* ── GAME HUD ── */
+#screen-game{flex-direction:column}
+.hud{position:relative;z-index:2;background:rgba(10,10,10,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:clamp(7px,1.8vw,11px) clamp(11px,2.8vw,18px);display:flex;align-items:center;gap:clamp(7px,1.8vw,12px);flex-wrap:wrap}
+.hud-rnd{font-family:'DM Mono',monospace;font-size:clamp(.42rem,1.3vw,.54rem);color:var(--dim)}
+.hud-streak{font-family:'DM Mono',monospace;font-size:clamp(.4rem,1.2vw,.5rem);color:var(--gold)}
+.hud-spacer{flex:1}
+.score-bar{display:flex;gap:clamp(5px,1.3vw,10px);align-items:center;flex-wrap:wrap}
+.score-chip{display:flex;align-items:center;gap:5px;background:transparent;border:1px solid var(--border);border-radius:3px;padding:4px 9px;transition:all .2s}
+.score-chip.active{background:rgba(249,115,22,.12);border-color:var(--orange)}
+.score-name{font-size:clamp(.4rem,1.2vw,.52rem);color:var(--dim);font-weight:600}
+.score-val{font-family:'DM Mono',monospace;font-size:clamp(.58rem,1.9vw,.75rem);font-weight:700}
+.progress-bar{height:2px;background:var(--bg2)}
+.progress-fill{height:100%;background:var(--orange);transition:width .5s ease}
+
+/* ── GAME CONTENT ── */
+.game-content{flex:1;position:relative;z-index:1;display:flex;flex-direction:column;overflow:auto;padding:clamp(10px,2.5vw,18px);gap:clamp(9px,2.3vw,14px)}
+
+/* ── HAND GRID ── */
+.hand-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(4px,1vw,7px)}
+.card-tile{background:var(--bg2);border:1.5px solid var(--border);border-radius:3px;cursor:pointer;transition:all .13s;position:relative;overflow:hidden;padding:clamp(7px,1.8vw,10px) clamp(5px,1.2vw,7px);display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;text-align:center}
+.card-tile:hover{border-color:var(--orange);transform:translateY(-2px);box-shadow:0 6px 20px rgba(249,115,22,.18)}
+.card-tile.selected{border-color:var(--orange);box-shadow:0 0 22px rgba(249,115,22,.28);transform:translateY(-4px)}
+.card-tile.selected::after{content:'';position:absolute;inset:0;background:rgba(249,115,22,.08);pointer-events:none}
+.card-tile.used{opacity:.22;pointer-events:none}
+.card-emoji{font-size:clamp(.95rem,3vw,1.35rem)}
+.card-nom{font-family:'DM Mono',monospace;font-size:clamp(.36rem,1vw,.48rem);letter-spacing:.08em}
+.card-pts{font-family:'DM Mono',monospace;font-size:clamp(.36rem,1vw,.48rem);color:var(--gold)}
+
+/* ── SELECTED CARD DETAIL ── */
+.card-detail{padding:clamp(12px,3vw,20px)}
+.card-detail-head{display:flex;align-items:flex-start;gap:clamp(9px,2.3vw,15px);flex-wrap:wrap;margin-bottom:10px}
+.card-detail-emoji{font-size:clamp(1.3rem,5.5vw,2.1rem);line-height:1;flex-shrink:0}
+.card-detail-meta{flex:1;min-width:150px}
+.card-detail-name{font-family:'DM Mono',monospace;font-size:clamp(.46rem,1.4vw,.58rem);letter-spacing:.08em}
+.card-detail-text{font-size:clamp(.78rem,2.5vw,.92rem);font-weight:700;line-height:1.4;margin:5px 0}
+.card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+
+/* ── PLAY PHASE ── */
+.play-card{border-radius:3px;padding:clamp(12px,3vw,20px)}
+.play-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:7px}
+.play-question{font-size:clamp(.86rem,2.8vw,1.08rem);font-weight:800;line-height:1.35;color:var(--white)}
+.ai-status{display:flex;align-items:center;gap:9px;background:var(--bg2);border:1px solid var(--border);padding:clamp(6px,1.8vw,10px) clamp(11px,2.8vw,15px);border-radius:3px}
+.ai-label{font-family:'DM Mono',monospace;font-size:clamp(.43rem,1.3vw,.55rem);letter-spacing:.08em}
+.ai-state{font-family:'DM Mono',monospace;font-size:clamp(.4rem,1.2vw,.52rem);color:var(--dim)}
+.options-list{display:flex;flex-direction:column;gap:clamp(5px,1.3vw,8px)}
+.opt-btn{background:var(--bg2);border:1.5px solid var(--border);border-radius:3px;cursor:pointer;transition:all .13s;color:var(--white);text-align:left;position:relative;overflow:hidden;padding:clamp(11px,2.8vw,15px) clamp(12px,3vw,17px);font-size:clamp(.78rem,2.4vw,.9rem);font-weight:600;line-height:1.4;width:100%}
+.opt-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--orange);transform:scaleY(0);transition:transform .13s}
+.opt-btn:hover{border-color:var(--orange);background:#1f1f1f}.opt-btn:hover::before{transform:scaleY(1)}
+.opt-btn.chosen{border-color:var(--orange);background:#1f1f1f}.opt-btn.chosen::before{transform:scaleY(1)}
+.opt-btn:disabled{cursor:default}
+.opt-letter{font-family:'DM Mono',monospace;font-size:clamp(.48rem,1.4vw,.58rem);margin-right:9px}
+
+/* ── TIMER RING ── */
+.timer-wrap{position:relative;width:44px;height:44px;flex-shrink:0}
+.timer-wrap svg{transform:rotate(-90deg);position:absolute;inset:0}
+.timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:clamp(.72rem,2.3vw,.88rem);font-weight:700}
+
+/* ── RESULT PHASE ── */
+.result-card{background:var(--bg1);border:1.5px solid var(--border);padding:clamp(17px,4.5vw,30px);border-radius:3px;max-width:450px;width:100%}
+.result-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.5rem,6.5vw,2.5rem);letter-spacing:.12em;text-align:center}
+.result-sub{font-family:'DM Mono',monospace;font-size:clamp(.42rem,1.3vw,.54rem);color:var(--dim);text-align:center;margin-top:4px;margin-bottom:clamp(12px,3vw,18px)}
+.pts-grid{display:grid;gap:8px;margin-bottom:clamp(11px,2.8vw,16px)}
+.pts-cell{background:var(--bg3);border-radius:3px;padding:clamp(8px,2.3vw,13px);text-align:center}
+.pts-icon{font-size:clamp(.8rem,2.7vw,1.1rem);margin-bottom:2px}
+.pts-name{font-family:'DM Mono',monospace;font-size:clamp(.4rem,1.2vw,.5rem);color:var(--dim);margin-bottom:3px}
+.pts-val{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.1rem,4.3vw,1.7rem);letter-spacing:.08em}
+.pts-total{font-family:'DM Mono',monospace;font-size:clamp(.38rem,1.1vw,.48rem);color:var(--dim)}
+.choices-box{background:var(--bg3);border:1px solid var(--border);padding:clamp(7px,1.8vw,11px) clamp(11px,2.8vw,15px);margin-bottom:clamp(10px,2.5vw,14px);border-radius:3px}
+.choices-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:7px}
+.choice-item .choice-who{font-family:'DM Mono',monospace;font-size:clamp(.4rem,1.2vw,.5rem);color:var(--dim)}
+.choice-item .choice-val{font-size:clamp(.68rem,2.1vw,.8rem);font-weight:700}
+
+/* ── PASS DEVICE ── */
+.pass-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(20px,5vw,40px);text-align:center;animation:popIn .3s ease}
+.pass-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.4rem,7vw,2.8rem);color:var(--white);letter-spacing:.08em;margin-bottom:8px}
+.pass-icon{font-size:clamp(2.5rem,10vw,4rem);margin-bottom:14px}
+.pass-player{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,6vw,2.2rem);letter-spacing:.08em;margin-bottom:22px}
+
+/* ── QUIT MODAL ── */
+.modal-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:var(--bg1);border:1.5px solid var(--orange);border-radius:4px;padding:clamp(20px,5vw,36px);max-width:380px;width:100%;text-align:center}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.3rem,5vw,2rem);color:var(--orange);letter-spacing:.1em;margin-bottom:10px}
+.modal-sub{font-size:clamp(.75rem,2.3vw,.88rem);color:var(--dim);margin-bottom:20px}
+.modal-btns{display:flex;gap:10px}
+
+/* ── LOCAL PLAYER BAR ── */
+.player-turn-bar{display:flex;align-items:center;gap:9px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);padding:7px 12px;border-radius:3px;transition:all .2s}
+
+/* ── RESULTS SCREEN ── */
+#screen-result{align-items:center;justify-content:center;padding:clamp(14px,3.5vw,36px)}
+.results-inner{position:relative;z-index:1;max-width:450px;width:100%;animation:fadeUp .38s ease}
+.result-win-icon{font-size:clamp(2.5rem,10vw,4rem);text-align:center;margin-bottom:8px}
+.result-main-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.8rem,8vw,3.2rem);letter-spacing:.12em;color:var(--orange);text-shadow:0 0 28px var(--orange-glow);text-align:center}
+.result-winner-name{font-size:clamp(.72rem,2.2vw,.86rem);color:var(--dim);text-align:center;margin-bottom:clamp(16px,4vw,28px)}
+.leaderboard{background:var(--bg1);border:1px solid var(--border);border-radius:3px;margin-bottom:12px;overflow:hidden}
+.lb-header{border-bottom:1px solid var(--border);padding:clamp(7px,2vw,11px) clamp(13px,3.3vw,18px)}
+.lb-rows{padding:clamp(11px,2.8vw,18px);display:flex;flex-direction:column;gap:7px}
+.lb-row{display:flex;align-items:center;gap:11px;background:var(--bg3);border:1px solid var(--border);padding:clamp(9px,2.5vw,14px) clamp(11px,2.8vw,16px);border-radius:3px;transition:all .2s}
+.lb-row.first{background:rgba(249,115,22,.08);border-color:var(--orange)}
+.lb-medal{font-size:clamp(.95rem,3.3vw,1.3rem);min-width:26px;text-align:center}
+.lb-icon{font-size:clamp(.85rem,2.8vw,1.1rem)}
+.lb-name{flex:1;font-size:clamp(.78rem,2.4vw,.92rem);font-weight:600}
+.lb-name.first{color:var(--orange);font-weight:800}
+.lb-score{font-family:'Bebas Neue',sans-serif;font-size:clamp(1rem,3.8vw,1.5rem);letter-spacing:.08em}
+.result-btns{display:flex;gap:9px}
+
+/* ── UTIL ── */
+.flex-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.spacer{flex:1}
+.centered{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1}
+.divider{display:flex;align-items:center;gap:10px;margin:4px 0}
+.divider-line{flex:1;height:1px;background:var(--border)}
+.divider-txt{font-family:'DM Mono',monospace;font-size:.55rem;color:var(--dim)}
+.full-w{width:100%}
+.mt-8{margin-top:8px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="top-line"></div>
+<div id="toast" class="hidden"></div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SCREEN: WELCOME                                -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="screen-welcome" class="screen active">
+  <div class="welcome-inner">
+    <!-- Main sub-screen -->
+    <div id="sub-main" class="sub-screen active">
+      <div style="margin-bottom:clamp(18px,4.5vw,36px)">
+        <div class="logo-text">ECHO</div>
+        <div class="logo-sub">JEU DE CARTES SOCIAL // 2–6 JOUEURS</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-n">250</div><div class="stat-l">CARTES</div></div>
+        <div class="stat-box"><div class="stat-n">7</div><div class="stat-l">TYPES</div></div>
+        <div class="stat-box"><div class="stat-n">4</div><div class="stat-l">MODES</div></div>
+      </div>
+      <div class="setup-panel">
+        <div class="ms">// TON NOM</div>
+        <input type="text" id="player-name" class="input-text" placeholder="Entre ton nom..." maxlength="16">
+        <div class="ms">// TON ICÔNE</div>
+        <div class="icon-grid" id="icon-grid"></div>
+        <div class="mode-grid">
+          <button class="btn btn-orange full-w" style="padding:clamp(11px,2.8vw,15px);font-size:clamp(.82rem,2.5vw,.95rem)" onclick="gotoSub('sub-vsai')">🤖 VS ORDINATEUR</button>
+          <div class="grid-2">
+            <button class="btn btn-outline full-w" style="padding:clamp(10px,2.5vw,14px);font-size:clamp(.75rem,2.3vw,.88rem)" onclick="gotoSub('sub-local')">📱 LOCAL</button>
+            <button class="btn btn-outline full-w" style="padding:clamp(10px,2.5vw,14px);font-size:clamp(.75rem,2.3vw,.88rem)" onclick="gotoSub('sub-online')">🌐 EN LIGNE</button>
+          </div>
+          <button class="btn btn-ghost full-w" style="padding:clamp(9px,2.3vw,12px);font-size:clamp(.72rem,2.2vw,.84rem)" onclick="startSolo()">🎯 Entraînement solo</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost full-w" style="padding:clamp(9px,2.3vw,12px);font-size:clamp(.72rem,2.2vw,.84rem)" onclick="showScreen('screen-manual')">📖 Manuel du jeu — 250 cartes, 7 types</button>
+    </div>
+
+    <!-- VS AI sub-screen -->
+    <div id="sub-vsai" class="sub-screen">
+      <div class="flex-row"><button class="btn-back" onclick="gotoSub('sub-main')">← Retour</button><div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,5vw,1.8rem);color:var(--orange);letter-spacing:.1em">VS ORDINATEUR</div></div>
+      <div class="setup-panel">
+        <div class="ms">// NIVEAU IA</div>
+        <div class="diff-grid" id="diff-grid"></div>
+        <button class="btn btn-orange full-w" style="padding:clamp(11px,2.8vw,15px);font-size:clamp(.82rem,2.5vw,.95rem)" onclick="startVsAI()">▶ LANCER</button>
+      </div>
+    </div>
+
+    <!-- Local sub-screen -->
+    <div id="sub-local" class="sub-screen">
+      <div class="flex-row"><button class="btn-back" onclick="gotoSub('sub-main')">← Retour</button><div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,5vw,1.8rem);color:var(--orange);letter-spacing:.1em">LOCAL — MÊME ÉCRAN</div></div>
+      <div class="setup-panel">
+        <div class="ms">// NOMBRE DE JOUEURS</div>
+        <div class="np-row" id="np-row"></div>
+        <div class="ms">// NOMS DES JOUEURS</div>
+        <div id="local-names"></div>
+        <button class="btn btn-orange full-w" style="padding:clamp(11px,2.8vw,15px);font-size:clamp(.82rem,2.5vw,.95rem);margin-top:6px" onclick="startLocal()">▶ LANCER</button>
+      </div>
+    </div>
+
+    <!-- Online sub-screen -->
+    <div id="sub-online" class="sub-screen">
+      <div class="flex-row"><button class="btn-back" onclick="gotoSub('sub-main')">← Retour</button><div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,5vw,1.8rem);color:var(--orange);letter-spacing:.1em">EN LIGNE</div></div>
+      <div class="setup-panel" style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-orange full-w" style="padding:clamp(11px,2.8vw,15px);font-size:clamp(.82rem,2.5vw,.95rem)" onclick="createRoom()">🏠 CRÉER UN SALON</button>
+        <div class="divider"><div class="divider-line"></div><span class="divider-txt">OU</span><div class="divider-line"></div></div>
+        <div class="ms">// REJOINDRE AVEC UN CODE</div>
+        <input type="text" id="join-code-input" class="code-input" placeholder="CODE DU SALON" maxlength="5" oninput="this.value=this.value.toUpperCase()">
+        <div id="join-error" class="error-msg hidden"></div>
+        <button class="btn btn-outline full-w" style="padding:clamp(11px,2.8vw,15px);font-size:clamp(.82rem,2.5vw,.95rem)" onclick="joinRoom()">→ REJOINDRE</button>
+      </div>
+    </div>
+
+    <!-- Online host waiting room -->
+    <div id="sub-online-host" class="sub-screen">
+      <div class="flex-row"><button class="btn-back" onclick="leaveRoom()">← Retour</button><div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(1.1rem,4.5vw,1.6rem);color:var(--orange);letter-spacing:.1em">SALON EN ATTENTE</div></div>
+      <div class="setup-panel">
+        <div class="ms" style="text-align:center">CODE DU SALON</div>
+        <div class="code-display" id="room-code-display">—</div>
+        <div style="font-size:clamp(.62rem,1.9vw,.72rem);color:var(--dim);text-align:center;margin-bottom:14px">Partage ce code avec tes amis</div>
+        <div class="ms" id="room-players-label">// JOUEURS (0/6)</div>
+        <div class="room-players" id="room-players-list"></div>
+        <div id="room-wait-msg" style="font-size:clamp(.62rem,1.9vw,.72rem);color:var(--dim);text-align:center;margin-bottom:10px">En attente d'au moins 1 autre joueur...</div>
+        <button id="launch-btn" class="btn btn-orange full-w" style="padding:clamp(11px,2.8vw,15px);font-size:clamp(.82rem,2.5vw,.95rem)" onclick="launchOnline()" disabled>▶ LANCER LA PARTIE</button>
+      </div>
+    </div>
+
+    <!-- Online join waiting -->
+    <div id="sub-online-join-wait" class="sub-screen" style="text-align:center">
+      <div class="flex-row" style="justify-content:center"><button class="btn-back" onclick="leaveRoom()">← Retour</button><div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(1.1rem,4.5vw,1.6rem);color:var(--orange);letter-spacing:.1em">EN ATTENTE</div></div>
+      <div class="setup-panel">
+        <div class="pulse" style="width:14px;height:14px;border-radius:50%;background:var(--green);margin:0 auto 14px"></div>
+        <div style="font-size:clamp(.78rem,2.4vw,.92rem);color:var(--dim);margin-bottom:6px">Tu as rejoint le salon <strong id="joined-code" style="color:var(--gold)">—</strong></div>
+        <div style="font-size:clamp(.7rem,2.1vw,.82rem);color:var(--dim)">En attente que l'hôte lance la partie...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SCREEN: MANUAL                                 -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="screen-manual" class="screen">
+  <div class="manual-top">
+    <button class="btn-back" onclick="showScreen('screen-welcome')">← Retour</button>
+    <div class="manual-title">MANUEL DU JEU</div>
+    <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:clamp(.4rem,1.3vw,.52rem);color:var(--dim)">250 CARTES</div>
+  </div>
+  <div class="manual-body">
+    <div class="manual-section">
+      <h3>QU'EST-CE QU'ECHO ?</h3>
+      <p>Echo est un jeu de cartes social rapide et stratégique. Accumule le maximum de points en 10 manches en jouant des cartes astucieuses, en anticipant tes adversaires, en coopérant ou en relevant des défis impossibles. De <strong style="color:var(--white)">2 à 6 joueurs</strong> — contre des amis, en famille, ou contre une IA redoutable.</p>
+    </div>
+    <div class="manual-section">
+      <h3>COMMENT JOUER ?</h3>
+      <ul>
+        <li><strong style="color:var(--white)">1. La main :</strong> chaque joueur commence avec <strong style="color:var(--white)">5 cartes</strong>. Une nouvelle carte est piochée après chaque manche.</li>
+        <li><strong style="color:var(--white)">2. Choisir :</strong> sélectionne une carte et clique sur "Jouer".</li>
+        <li><strong style="color:var(--white)">3. Répondre :</strong> la carte affiche une question avec 2 ou 3 options. Choisis avant que le timer tombe à 0 !</li>
+        <li><strong style="color:var(--white)">4. Points :</strong> les points sont attribués selon le type de carte.</li>
+        <li><strong style="color:var(--white)">5. Fin :</strong> après 10 manches, le joueur avec le plus de points gagne !</li>
+      </ul>
+    </div>
+    <div class="manual-section">
+      <h3>SYSTÈME DE POINTS</h3>
+      <ul>
+        <li><strong style="color:var(--gold)">Points de base :</strong> chaque carte indique ses points bonus (+2 à +30).</li>
+        <li><strong style="color:var(--gold)">Streak x3 :</strong> 3 bonnes réponses consécutives = +4 points bonus automatiques.</li>
+        <li><strong style="color:var(--gold)">Échec :</strong> même en cas d'échec, tu marques toujours au moins 1 point.</li>
+        <li><strong style="color:var(--gold)">Cartes BONUS :</strong> jusqu'à +30 points d'un coup !</li>
+        <li><strong style="color:var(--gold)">Sprint :</strong> les DÉFI ultra-rapides (2–3s) rapportent le double.</li>
+      </ul>
+    </div>
+    <div class="manual-section">
+      <h3>LES 7 TYPES DE CARTES — 250 AU TOTAL</h3>
+      <div style="margin-bottom:14px" id="type-chips"></div>
+      <div id="type-descriptions"></div>
+    </div>
+    <div class="manual-section">
+      <h3>LES 4 MODES DE JEU</h3>
+      <ul>
+        <li><strong style="color:var(--white)">🤖 VS Ordinateur :</strong> 4 niveaux de Facile à Élite (92% précision, réaction éclair).</li>
+        <li><strong style="color:var(--white)">📱 Local :</strong> 2 à 6 joueurs sur un seul appareil. On se passe le téléphone !</li>
+        <li><strong style="color:var(--white)">🌐 En ligne :</strong> Code à 5 lettres à partager. Chacun joue sur son propre appareil.</li>
+        <li><strong style="color:var(--white)">🎯 Solo :</strong> Explore les 250 cartes à ton rythme sans adversaire.</li>
+      </ul>
+    </div>
+    <div class="manual-section">
+      <h3>MULTIJOUEUR EN LIGNE</h3>
+      <ul>
+        <li><strong style="color:var(--white)">1.</strong> L'hôte crée un salon et reçoit un <strong style="color:var(--gold)">code à 5 lettres</strong>.</li>
+        <li><strong style="color:var(--white)">2.</strong> Les amis entrent ce code sur leur téléphone/tablette.</li>
+        <li><strong style="color:var(--white)">3.</strong> L'hôte lance quand tout le monde est là (jusqu'à 6 joueurs).</li>
+        <li><strong style="color:var(--white)">4.</strong> Chacun joue simultanément sur son propre écran.</li>
+      </ul>
+    </div>
+    <div class="manual-section">
+      <h3>STRATÉGIES GAGNANTES</h3>
+      <ul>
+        <li>🎯 Garde tes cartes BONUS pour les 3 dernières manches.</li>
+        <li>⚡ Les DÉFI ultra-rapides (2–3s) = énorme prise de risque = énorme récompense.</li>
+        <li>👀 Sur les PRÉDICTION, observe les habitudes de tes adversaires.</li>
+        <li>🔥 Le Streak x3 est décisif — enchaîne les victoires pour le bonus.</li>
+        <li>🌊 Les cartes MONDIAL peuvent propulser un joueur en retard en tête.</li>
+        <li>↩️ Les cartes IMITATION "à contre-courant" rapportent +9 pts !</li>
+      </ul>
+    </div>
+    <button class="btn btn-orange full-w" style="padding:clamp(12px,3vw,16px);font-size:clamp(.88rem,2.7vw,1rem)" onclick="showScreen('screen-welcome')">▶ COMMENCER À JOUER</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SCREEN: GAME                                   -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
+  <!-- HUD -->
+  <div class="hud">
+    <button class="btn-back" onclick="showQuitModal()">← Menu</button>
+    <div class="hud-rnd">RND <span id="hud-rnd" style="color:var(--white)">01</span>/10</div>
+    <div class="hud-streak pulse hidden" id="hud-streak">STK×0</div>
+    <div class="hud-spacer"></div>
+    <div class="score-bar" id="score-bar"></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <!-- Game phases -->
+  <div class="game-content" id="game-content"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SCREEN: RESULTS                               -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="screen-result" class="screen">
+  <div class="grid-bg"></div>
+  <div class="results-inner">
+    <div class="result-win-icon" id="result-icon">🏆</div>
+    <div class="result-main-title">FIN DE PARTIE</div>
+    <div class="result-winner-name" id="result-winner">—</div>
+    <div class="leaderboard">
+      <div class="lb-header"><span class="ms" style="margin:0">// CLASSEMENT FINAL</span></div>
+      <div class="lb-rows" id="lb-rows"></div>
+    </div>
+    <div class="result-btns">
+      <button class="btn btn-orange" style="flex:2;padding:clamp(10px,2.8vw,14px);font-size:clamp(.8rem,2.4vw,.93rem)" onclick="replayGame()">▶ REJOUER</button>
+      <button class="btn btn-ghost" style="flex:1;padding:clamp(10px,2.8vw,14px);font-size:clamp(.8rem,2.4vw,.93rem)" onclick="showScreen('screen-welcome')">⌂ MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quit modal -->
+<div id="quit-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-title">QUITTER ?</div>
+    <div class="modal-sub">Ta progression sera perdue.</div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" style="flex:1;padding:clamp(10px,2.5vw,14px);font-size:clamp(.78rem,2.4vw,.9rem)" onclick="closeQuitModal()">Continuer</button>
+      <button class="btn btn-orange" style="flex:1;padding:clamp(10px,2.5vw,14px);font-size:clamp(.78rem,2.4vw,.9rem)" onclick="quitGame()">Quitter</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ══════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════
+const PLAYER_COLORS=["#f97316","#3b82f6","#22c55e","#f5c518","#a855f7","#ef4444"];
+const PLAYER_ICONS=["🦁","🐙","🦊","🐉","🦅","🐺"];
+const AI_PROFILES={
+  easy:{label:"Facile",accuracy:.32,reactionMs:2500,color:"#22c55e"},
+  medium:{label:"Normal",accuracy:.57,reactionMs:1400,color:"#f5c518"},
+  hard:{label:"Difficile",accuracy:.77,reactionMs:650,color:"#f97316"},
+  elite:{label:"Élite",accuracy:.92,reactionMs:250,color:"#a855f7"}
+};
+const TYPE_META={
+  PREDICTION:{label:"Prédiction",color:"#3b82f6"},
+  SURPRISE:{label:"Surprise",color:"#f5c518"},
+  PARTAGE:{label:"Partage",color:"#22c55e"},
+  IMITATION:{label:"Imitation",color:"#f97316"},
+  DEFI:{label:"Défi",color:"#ef4444"},
+  MONDIAL:{label:"Mondial",color:"#a855f7"},
+  BONUS:{label:"Bonus",color:"#f5c518"}
+};
+const TYPE_DESCS={
+  PREDICTION:"Anticipe les choix des autres. Devine qui choisira quoi, quelle option dominera, quel score atteindra ton adversaire.",
+  SURPRISE:"Libère ta créativité ! Invente des mots, crée des animaux hybrides, imagine des mondes impossibles.",
+  PARTAGE:"Coopère avec les autres joueurs. Donne des points, forme des alliances, vote ensemble.",
+  IMITATION:"Surf sur les tendances ou va totalement à contre-courant. Copier le leader ou être le seul différent peut rapporter gros.",
+  DEFI:"Mini-challenges rapides ou créatifs. Certains donnent 3 secondes, d'autres 30. Haut risque = haut reward.",
+  MONDIAL:"Tout le groupe joue ensemble. L'option majoritaire rapporte des points, parfois à tout le monde.",
+  BONUS:"Les cartes les plus puissantes du jeu. Joker, multiplicateurs, cartes secrètes. Utilisées au bon moment, elles doublent ou triplent ton score."
+};
+
+const CARDS=[
+  // PRÉDICTION (60)
+  {id:1,nom:"PRED-01",type:"PREDICTION",emoji:"🔮",texte:"Combien de joueurs choisiront un chat ?",options:["0–50%","51–100%"],pts:5,t:15},
+  {id:2,nom:"PRED-02",type:"PREDICTION",emoji:"🎨",texte:"Quelle couleur sera la plus populaire ce tour ?",options:["Rouge","Bleu","Vert"],pts:5,t:10},
+  {id:3,nom:"PRED-03",type:"PREDICTION",emoji:"🔢",texte:"Quel chiffre sera le plus choisi ?",options:["1","7","42"],pts:5,t:10},
+  {id:4,nom:"PRED-04",type:"PREDICTION",emoji:"✨",texte:"Quel animal improbable sera sélectionné ?",options:["Axolotl","Capybara","Tardigrade"],pts:7,t:15},
+  {id:5,nom:"PRED-05",type:"PREDICTION",emoji:"📊",texte:"Quel type de carte va dominer ce tour ?",options:["SURPRISE","DÉFI","PARTAGE"],pts:6,t:12},
+  {id:6,nom:"PRED-06",type:"PREDICTION",emoji:"👁️",texte:"Que choisira le joueur à ta gauche ?",options:["Chat","Chien","Lapin"],pts:8,t:10},
+  {id:7,nom:"PRED-07",type:"PREDICTION",emoji:"🗳️",texte:"Quel animal gagnera le vote du groupe ?",options:["Chat","Chien","Lapin"],pts:5,t:10},
+  {id:8,nom:"PRED-08",type:"PREDICTION",emoji:"📝",texte:"Quel mot reviendra le plus souvent ?",options:["Soleil","Étoile","Lune"],pts:5,t:10},
+  {id:9,nom:"PRED-09",type:"PREDICTION",emoji:"😂",texte:"Quelle réponse fera le plus rire ?",options:["Pingouin","Lama","Pieuvre"],pts:6,t:12},
+  {id:10,nom:"PRED-10",type:"PREDICTION",emoji:"🎯",texte:"Quelle option sera ignorée par tout le monde ?",options:["Violet","Turquoise","Bordeaux"],pts:9,t:15},
+  {id:11,nom:"PRED-11",type:"PREDICTION",emoji:"🌈",texte:"Quelle couleur sera la moins choisie ?",options:["Mauve","Beige","Kaki"],pts:8,t:12},
+  {id:12,nom:"PRED-12",type:"PREDICTION",emoji:"🏆",texte:"Quel score aura ton adversaire ce tour ?",options:["0-5 pts","6-10 pts","11+ pts"],pts:7,t:10},
+  {id:13,nom:"PRED-13",type:"PREDICTION",emoji:"🎲",texte:"Quel animal fantastique sera choisi ?",options:["Dragon","Phoenix","Licorne"],pts:8,t:12},
+  {id:14,nom:"PRED-14",type:"PREDICTION",emoji:"🪑",texte:"Quel objet incongru sera sélectionné ?",options:["Chaise","Crayon","Licorne"],pts:7,t:10},
+  {id:15,nom:"PRED-15",type:"PREDICTION",emoji:"🌍",texte:"Quel aliment domine mondialement ?",options:["Pizza","Sushi","Burger"],pts:5,t:15},
+  {id:16,nom:"PRED-16",type:"PREDICTION",emoji:"⚡",texte:"Qui répondra en moins de 3 secondes ?",options:["Moi","Mon voisin","Personne"],pts:6,t:8},
+  {id:17,nom:"PRED-17",type:"PREDICTION",emoji:"💬",texte:"Quel mot inventé sera le plus choisi ?",options:["Flurpex","Gloubix","Zarbof"],pts:8,t:15},
+  {id:18,nom:"PRED-18",type:"PREDICTION",emoji:"💎",texte:"Combien de points ce tour ?",options:["1-5 pts","6-10 pts","11+ pts"],pts:6,t:10},
+  {id:19,nom:"PRED-19",type:"PREDICTION",emoji:"🃏",texte:"Quelle carte bonus sera jouée ?",options:["JOKER","SECRET","MUTATION"],pts:7,t:12},
+  {id:20,nom:"PRED-20",type:"PREDICTION",emoji:"🌀",texte:"Quelle combo improbable sortira ?",options:["Lion+Pizza","Poulpe+Guitare","Papillon+Engrenage"],pts:10,t:15},
+  {id:21,nom:"PRED-21",type:"PREDICTION",emoji:"🐠",texte:"Quel animal marin sera choisi ?",options:["Requin","Pieuvre","Baleine"],pts:5,t:10},
+  {id:22,nom:"PRED-22",type:"PREDICTION",emoji:"🌙",texte:"Quelle planète sera la plus choisie ?",options:["Mars","Jupiter","Saturne"],pts:6,t:12},
+  {id:23,nom:"PRED-23",type:"PREDICTION",emoji:"🎮",texte:"Quel jeu vidéo sera mentionné ?",options:["Minecraft","Mario","FIFA"],pts:6,t:10},
+  {id:24,nom:"PRED-24",type:"PREDICTION",emoji:"🍕",texte:"Quel aliment préféré sera choisi ?",options:["Pizza","Tacos","Sushi"],pts:5,t:10},
+  {id:25,nom:"PRED-25",type:"PREDICTION",emoji:"🚀",texte:"Quel moyen de transport du futur ?",options:["Fusée","Téléporteur","Tapis volant"],pts:7,t:12},
+  {id:26,nom:"PRED-26",type:"PREDICTION",emoji:"🦁",texte:"Quel animal sauvage préféré ?",options:["Lion","Tigre","Loup"],pts:5,t:10},
+  {id:27,nom:"PRED-27",type:"PREDICTION",emoji:"🎵",texte:"Quel genre musical populaire ?",options:["Rap","Pop","Rock"],pts:5,t:10},
+  {id:28,nom:"PRED-28",type:"PREDICTION",emoji:"🌊",texte:"Destination vacances préférée ?",options:["Plage","Montagne","Ville"],pts:5,t:10},
+  {id:29,nom:"PRED-29",type:"PREDICTION",emoji:"🦋",texte:"Quel insecte sera choisi ?",options:["Papillon","Coccinelle","Libellule"],pts:6,t:10},
+  {id:30,nom:"PRED-30",type:"PREDICTION",emoji:"🧠",texte:"Quel super-sens sera plébiscité ?",options:["Télépathie","Précognition","Télékinésie"],pts:8,t:12},
+  {id:31,nom:"PRED-31",type:"PREDICTION",emoji:"🏀",texte:"Quel sport sera le plus cité ?",options:["Football","Basketball","Tennis"],pts:5,t:10},
+  {id:32,nom:"PRED-32",type:"PREDICTION",emoji:"🌺",texte:"Quelle fleur sera choisie ?",options:["Rose","Tournesol","Orchidée"],pts:5,t:10},
+  {id:33,nom:"PRED-33",type:"PREDICTION",emoji:"🎭",texte:"Quel métier de rêve sera sélectionné ?",options:["Astronaute","Artiste","Inventeur"],pts:6,t:12},
+  {id:34,nom:"PRED-34",type:"PREDICTION",emoji:"🦊",texte:"Quel animal de forêt sera choisi ?",options:["Renard","Cerf","Hibou"],pts:5,t:10},
+  {id:35,nom:"PRED-35",type:"PREDICTION",emoji:"⏰",texte:"Quelle époque sera la plus choisie ?",options:["Préhistoire","Moyen Âge","Futur"],pts:7,t:12},
+  {id:36,nom:"PRED-36",type:"PREDICTION",emoji:"🎪",texte:"Quel art de cirque préféré ?",options:["Acrobaties","Magie","Jonglage"],pts:6,t:10},
+  {id:37,nom:"PRED-37",type:"PREDICTION",emoji:"🌟",texte:"Quel prénom sera inventé ?",options:["Zorax","Lumi","Brox"],pts:8,t:15},
+  {id:38,nom:"PRED-38",type:"PREDICTION",emoji:"🐋",texte:"Quel cétacé sera choisi ?",options:["Baleine bleue","Dauphin","Orque"],pts:6,t:10},
+  {id:39,nom:"PRED-39",type:"PREDICTION",emoji:"🍦",texte:"Quel parfum de glace préféré ?",options:["Chocolat","Vanille","Fraise"],pts:5,t:10},
+  {id:40,nom:"PRED-40",type:"PREDICTION",emoji:"🦅",texte:"Quel oiseau sera sélectionné ?",options:["Aigle","Perroquet","Pingouin"],pts:5,t:10},
+  {id:41,nom:"PRED-41",type:"PREDICTION",emoji:"🏔️",texte:"Quelle montagne légendaire sera choisie ?",options:["Everest","Kilimandjaro","Fuji"],pts:7,t:12},
+  {id:42,nom:"PRED-42",type:"PREDICTION",emoji:"🎬",texte:"Quel genre de film préféré ?",options:["Action","Comédie","Horreur"],pts:5,t:10},
+  {id:43,nom:"PRED-43",type:"PREDICTION",emoji:"🌵",texte:"Quel biome sera le plus voté ?",options:["Désert","Jungle","Toundra"],pts:6,t:12},
+  {id:44,nom:"PRED-44",type:"PREDICTION",emoji:"🤖",texte:"Quel robot de fiction sera choisi ?",options:["R2-D2","Terminator","Wall-E"],pts:7,t:10},
+  {id:45,nom:"PRED-45",type:"PREDICTION",emoji:"🦈",texte:"Quel prédateur marin ?",options:["Requin blanc","Pieuvre géante","Barracuda"],pts:6,t:10},
+  {id:46,nom:"PRED-46",type:"PREDICTION",emoji:"🌋",texte:"Quelle catastrophe naturelle sera citée ?",options:["Volcan","Tsunami","Tornade"],pts:6,t:12},
+  {id:47,nom:"PRED-47",type:"PREDICTION",emoji:"🎸",texte:"Quel instrument sera choisi ?",options:["Guitare","Piano","Batterie"],pts:5,t:10},
+  {id:48,nom:"PRED-48",type:"PREDICTION",emoji:"🐱",texte:"Quel animal serait le meilleur ami ?",options:["Chien","Chat","Lapin"],pts:5,t:10},
+  {id:49,nom:"PRED-49",type:"PREDICTION",emoji:"🔭",texte:"Quel astre sera le plus voté ?",options:["Soleil","Lune","Étoile filante"],pts:6,t:12},
+  {id:50,nom:"PRED-50",type:"PREDICTION",emoji:"🎯",texte:"Quel nombre entre 1 et 10 gagnera ?",options:["3","7","9"],pts:7,t:8},
+  {id:51,nom:"PRED-51",type:"PREDICTION",emoji:"🦜",texte:"Quel perroquet exotique choisir ?",options:["Ara bleu","Cacatoès blanc","Amazone"],pts:7,t:12},
+  {id:52,nom:"PRED-52",type:"PREDICTION",emoji:"🌏",texte:"Quel continent sera le plus voté ?",options:["Asie","Amérique","Afrique"],pts:5,t:10},
+  {id:53,nom:"PRED-53",type:"PREDICTION",emoji:"🍣",texte:"Quelle cuisine du monde dominera ?",options:["Japonaise","Mexicaine","Italienne"],pts:5,t:10},
+  {id:54,nom:"PRED-54",type:"PREDICTION",emoji:"🦗",texte:"Quel insecte sera le MOINS choisi ?",options:["Cafard","Moustique","Tique"],pts:9,t:12},
+  {id:55,nom:"PRED-55",type:"PREDICTION",emoji:"🏗️",texte:"Quelle construction légendaire ?",options:["Pyramide","Tour Eiffel","Grande Muraille"],pts:6,t:10},
+  {id:56,nom:"PRED-56",type:"PREDICTION",emoji:"🐊",texte:"Quel reptile sera sélectionné ?",options:["Crocodile","Iguane","Gecko"],pts:6,t:10},
+  {id:57,nom:"PRED-57",type:"PREDICTION",emoji:"🎠",texte:"Quel manège de parc d'attractions ?",options:["Montagnes russes","Roue de Ferris","Carrousel"],pts:5,t:10},
+  {id:58,nom:"PRED-58",type:"PREDICTION",emoji:"🌊",texte:"Quel phénomène météo sera cité ?",options:["Orage","Blizzard","Canicule"],pts:6,t:12},
+  {id:59,nom:"PRED-59",type:"PREDICTION",emoji:"🧊",texte:"Quel animal arctique sera choisi ?",options:["Ours polaire","Pingouin","Phoque"],pts:5,t:10},
+  {id:60,nom:"PRED-60",type:"PREDICTION",emoji:"🌈",texte:"Quelle couleur arc-en-ciel préférée ?",options:["Orange","Indigo","Violet"],pts:5,t:10},
+  // SURPRISE (55)
+  {id:61,nom:"SURP-01",type:"SURPRISE",emoji:"🚀",texte:"Quel animal vivrait sur Mars ?",options:["Tardigrade","Araignée","Chauve-souris"],pts:6,t:15},
+  {id:62,nom:"SURP-02",type:"SURPRISE",emoji:"🦄",texte:"Fusion improbable de deux animaux ?",options:["Licorne+Éléphant","Poulpe+Lion","Papillon+Croc"],pts:7,t:15},
+  {id:63,nom:"SURP-03",type:"SURPRISE",emoji:"🪄",texte:"Quel objet magique inventer ?",options:["Chapeau invisible","Crayon infini","Téléporteur"],pts:8,t:20},
+  {id:64,nom:"SURP-04",type:"SURPRISE",emoji:"🐾",texte:"Quel animal es-tu aujourd'hui ?",options:["Chat","Renard","Poulpe"],pts:5,t:12},
+  {id:65,nom:"SURP-05",type:"SURPRISE",emoji:"📚",texte:"Quel mot rare et oublié choisir ?",options:["Zénith","Galimatias","Esperluette"],pts:7,t:15},
+  {id:66,nom:"SURP-06",type:"SURPRISE",emoji:"🎨",texte:"Invente une couleur qui n'existe pas !",options:["Bleu-soleil","Rouge-silence","Vert-bruit"],pts:8,t:20},
+  {id:67,nom:"SURP-07",type:"SURPRISE",emoji:"✏️",texte:"Quelle créature hybride dessiner ?",options:["Dragon+Océan","Aigle+Poisson","Ours+Calmar"],pts:9,t:30},
+  {id:68,nom:"SURP-08",type:"SURPRISE",emoji:"😜",texte:"Quelle action totalement folle choisir ?",options:["Danser sous la pluie","Manger des étoiles","Parler aux nuages"],pts:6,t:15},
+  {id:69,nom:"SURP-09",type:"SURPRISE",emoji:"🦸",texte:"Quel super-pouvoir choisir ?",options:["Voler","Invisibilité","Parler aux animaux"],pts:7,t:15},
+  {id:70,nom:"SURP-10",type:"SURPRISE",emoji:"✈️",texte:"Quel objet pourrait s'envoler magiquement ?",options:["Bibliothèque","Piano","Banane"],pts:6,t:12},
+  {id:71,nom:"SURP-11",type:"SURPRISE",emoji:"🔤",texte:"Fusionne deux mots pour en créer un nouveau !",options:["Nuage+Livre","Feu+Océan","Ciel+Rêve"],pts:8,t:20},
+  {id:72,nom:"SURP-12",type:"SURPRISE",emoji:"🦓",texte:"Quel animal exotique ultra-rare choisir ?",options:["Okapi","Fossa","Bongo"],pts:9,t:15},
+  {id:73,nom:"SURP-13",type:"SURPRISE",emoji:"🌏",texte:"Quel monde imaginaire inventer ?",options:["Île flottante","Cité sous-marine","Forêt cristalline"],pts:8,t:20},
+  {id:74,nom:"SURP-14",type:"SURPRISE",emoji:"🐘",texte:"Si un animal grossissait x100, lequel ?",options:["Papillon géant","Fourmi géante","Colibri géant"],pts:7,t:15},
+  {id:75,nom:"SURP-15",type:"SURPRISE",emoji:"🔬",texte:"Si un animal rétrécissait, lequel garder ?",options:["Éléphant micro","Baleine micro","Girafe micro"],pts:7,t:15},
+  {id:76,nom:"SURP-16",type:"SURPRISE",emoji:"⚗️",texte:"Quel objet changerait les règles de la réalité ?",options:["Miroir du futur","Boussole des rêves","Horloge inversée"],pts:10,t:20},
+  {id:77,nom:"SURP-17",type:"SURPRISE",emoji:"😌",texte:"Quelle nouvelle émotion inventer ?",options:["Mélancolie dorée","Joie froide","Colère douce"],pts:9,t:20},
+  {id:78,nom:"SURP-18",type:"SURPRISE",emoji:"🎭",texte:"Quelle contrainte impossible pour la prochaine manche ?",options:["Jouer à l'envers","Souffler sur l'écran","Chanter sa réponse"],pts:7,t:15},
+  {id:79,nom:"SURP-19",type:"SURPRISE",emoji:"🧠",texte:"Si tu pouvais lire les pensées, que trouverais-tu ?",options:["Montagne","Plage","Forêt"],pts:8,t:12},
+  {id:80,nom:"SURP-20",type:"SURPRISE",emoji:"🍽️",texte:"Quel aliment totalement improbable manger ?",options:["Pizza à la fraise","Sushi au chocolat","Burger arc-en-ciel"],pts:6,t:15},
+  {id:81,nom:"SURP-21",type:"SURPRISE",emoji:"🏡",texte:"Dans quelle maison bizarre habiter ?",options:["Maison sous-marine","Château dans les nuages","Igloo volcanique"],pts:8,t:15},
+  {id:82,nom:"SURP-22",type:"SURPRISE",emoji:"🌀",texte:"Quelle dimension parallèle visiter ?",options:["Monde des rêves","Univers inversé","Dimension colorée"],pts:9,t:20},
+  {id:83,nom:"SURP-23",type:"SURPRISE",emoji:"🦠",texte:"Si les microbes avaient des pouvoirs, lesquels ?",options:["Rendre invisible","Donner de la force","Faire léviter"],pts:8,t:15},
+  {id:84,nom:"SURP-24",type:"SURPRISE",emoji:"🎃",texte:"Quel costume impossible pour Halloween ?",options:["Nuage vivant","Arc-en-ciel humain","Ombre ambulante"],pts:7,t:15},
+  {id:85,nom:"SURP-25",type:"SURPRISE",emoji:"🌌",texte:"Quelle constellation inventer ?",options:["La Grande Cuillère","Le Dragon Dansant","Le Lapin Sauteur"],pts:9,t:20},
+  {id:86,nom:"SURP-26",type:"SURPRISE",emoji:"🦕",texte:"Quel dinosaure inviter à dîner ?",options:["T-Rex","Brachiosaure","Vélociraptor"],pts:7,t:12},
+  {id:87,nom:"SURP-27",type:"SURPRISE",emoji:"🌈",texte:"Si le ciel changeait de couleur, laquelle ?",options:["Orange vif","Vert émeraude","Violet profond"],pts:6,t:12},
+  {id:88,nom:"SURP-28",type:"SURPRISE",emoji:"🎪",texte:"Quel animal dans un cirque cosmique ?",options:["Poulpe jongleur","Pingouin magicien","Girafe acrobate"],pts:8,t:15},
+  {id:89,nom:"SURP-29",type:"SURPRISE",emoji:"🧁",texte:"Quel goût aurait un arc-en-ciel ?",options:["Fraise-menthe","Caramel-citron","Chocolat-lavande"],pts:7,t:15},
+  {id:90,nom:"SURP-30",type:"SURPRISE",emoji:"🤯",texte:"Quelle chose ferait exploser le cerveau ?",options:["Voir le temps s'arrêter","Comprendre l'infini","Entendre les couleurs"],pts:10,t:20},
+  {id:91,nom:"SURP-31",type:"SURPRISE",emoji:"🐉",texte:"Quel dragon domestiquer en premier ?",options:["Dragon de feu","Dragon de glace","Dragon de lumière"],pts:7,t:12},
+  {id:92,nom:"SURP-32",type:"SURPRISE",emoji:"🎵",texte:"Quel son n'existe pas encore mais devrait ?",options:["Son du silence coloré","Son du rêve","Son de la vitesse"],pts:9,t:20},
+  {id:93,nom:"SURP-33",type:"SURPRISE",emoji:"🧬",texte:"Quelle combinaison ADN créer ?",options:["Humain+Dauphin","Chat+Aigle","Loup+Pieuvre"],pts:9,t:15},
+  {id:94,nom:"SURP-34",type:"SURPRISE",emoji:"🌙",texte:"Que trouverais-tu sur une lune inconnue ?",options:["Cristaux vivants","Forêt de champignons géants","Océan de lumière"],pts:8,t:15},
+  {id:95,nom:"SURP-35",type:"SURPRISE",emoji:"🏺",texte:"Quelle potion magique inventer ?",options:["Potion de vitesse","Potion de taille","Potion de vol"],pts:7,t:15},
+  {id:96,nom:"SURP-36",type:"SURPRISE",emoji:"🦩",texte:"Quel oiseau fantastique créer ?",options:["Flamant de glace","Corbeau d'or","Colibri de feu"],pts:8,t:15},
+  {id:97,nom:"SURP-37",type:"SURPRISE",emoji:"🧲",texte:"Si tu pouvais attirer quelque chose par la pensée ?",options:["Les nuages","Les étoiles","Les animaux"],pts:7,t:12},
+  {id:98,nom:"SURP-38",type:"SURPRISE",emoji:"🌊",texte:"Quel trésor dans les profondeurs ?",options:["Cité perdue","Monstre bienveillant","Forêt de corail magique"],pts:8,t:15},
+  {id:99,nom:"SURP-39",type:"SURPRISE",emoji:"🎯",texte:"Quel talent impossible acquérir ?",options:["Parler à tous les animaux","Voir dans le noir","Ralentir le temps"],pts:9,t:15},
+  {id:100,nom:"SURP-40",type:"SURPRISE",emoji:"🦋",texte:"Si les papillons avaient des pouvoirs ?",options:["Exaucer les vœux","Guérir les blessures","Voir le futur"],pts:8,t:15},
+  {id:101,nom:"SURP-41",type:"SURPRISE",emoji:"🌿",texte:"Quel arbre fantastique dans ton jardin ?",options:["Arbre à bonbons","Arbre à trésors","Arbre à rêves"],pts:7,t:15},
+  {id:102,nom:"SURP-42",type:"SURPRISE",emoji:"🌪️",texte:"Si tu contrôlais la météo, que créer ?",options:["Pluie de confettis","Neige colorée","Vent musical"],pts:8,t:15},
+  {id:103,nom:"SURP-43",type:"SURPRISE",emoji:"🐚",texte:"Que dirait une coquille magique ?",options:["Le secret de l'univers","La recette du bonheur","Ton avenir"],pts:9,t:20},
+  {id:104,nom:"SURP-44",type:"SURPRISE",emoji:"🌠",texte:"Que souhaiter à une étoile filante ?",options:["Parler aux étoiles","Voyager dans l'espace","Comprendre toutes les langues"],pts:7,t:15},
+  {id:105,nom:"SURP-45",type:"SURPRISE",emoji:"🧊",texte:"Quelle sculpture de glace vivante créer ?",options:["Dragon de cristal","Licorne de givre","Phénix de glace"],pts:8,t:20},
+  {id:106,nom:"SURP-46",type:"SURPRISE",emoji:"🪸",texte:"Quel être des profondeurs inventer ?",options:["Baleine chanteuse lumineuse","Poulpe télépathique","Méduse guérisseuse"],pts:9,t:15},
+  {id:107,nom:"SURP-47",type:"SURPRISE",emoji:"🫧",texte:"Quelle bulle magique éclater ?",options:["Bulle de temps","Bulle de bonheur","Bulle de voyage"],pts:7,t:12},
+  {id:108,nom:"SURP-48",type:"SURPRISE",emoji:"🏜️",texte:"Quel secret cache le désert ?",options:["Temple caché","Oasis éternelle","Cité de cristal"],pts:8,t:15},
+  {id:109,nom:"SURP-49",type:"SURPRISE",emoji:"🎆",texte:"Quel feu d'artifice pour une émotion ?",options:["Feu de la joie","Feu de l'espoir","Feu du courage"],pts:7,t:15},
+  {id:110,nom:"SURP-50",type:"SURPRISE",emoji:"🌺",texte:"Quelle fleur magique faire pousser ?",options:["Fleur qui guérit","Fleur qui chante","Fleur qui brille"],pts:7,t:15},
+  {id:111,nom:"SURP-51",type:"SURPRISE",emoji:"🌍",texte:"Quel pays inventé créer ?",options:["Pays des nuages","Pays des glaces éternelles","Pays des jungles musicales"],pts:9,t:20},
+  {id:112,nom:"SURP-52",type:"SURPRISE",emoji:"🔥",texte:"Si tu maîtrisais un élément naturel ?",options:["Feu","Eau","Foudre"],pts:7,t:10},
+  {id:113,nom:"SURP-53",type:"SURPRISE",emoji:"🎠",texte:"Quel manège fantastique créer ?",options:["Manège de nuages","Manège de lumières","Manège de rêves"],pts:8,t:15},
+  {id:114,nom:"SURP-54",type:"SURPRISE",emoji:"🪐",texte:"Quelle vie sur une autre planète inventer ?",options:["Humanoïdes de cristal","Créatures de lumière","Êtres de vapeur"],pts:10,t:20},
+  {id:115,nom:"SURP-55",type:"SURPRISE",emoji:"🌠",texte:"Quel animal cosmique inventer ?",options:["Renard des étoiles","Baleine galactique","Aigle de nébuleuse"],pts:9,t:18},
+  // PARTAGE (30)
+  {id:116,nom:"PART-01",type:"PARTAGE",emoji:"🎁",texte:"Donne 1 point à un joueur de ton choix",options:["Joueur le plus proche","Joueur avec moins de pts","Au hasard"],pts:3,t:10},
+  {id:117,nom:"PART-02",type:"PARTAGE",emoji:"🤝",texte:"Forme une alliance stratégique",options:["Joueur le plus fort","Joueur le plus créatif","Joueur au hasard"],pts:4,t:12},
+  {id:118,nom:"PART-03",type:"PARTAGE",emoji:"💡",texte:"Partage un indice précieux avec tous",options:["Indice couleur","Indice son","Indice forme"],pts:5,t:15},
+  {id:119,nom:"PART-04",type:"PARTAGE",emoji:"👥",texte:"Choix de groupe : quelle couleur pour tous ?",options:["Bleu","Rouge","Vert"],pts:4,t:10},
+  {id:120,nom:"PART-05",type:"PARTAGE",emoji:"🌟",texte:"Offre ton bonus à quelqu'un d'autre",options:["Au dernier joueur","Au meilleur","Au plus discret"],pts:3,t:8},
+  {id:121,nom:"PART-06",type:"PARTAGE",emoji:"⚡",texte:"Défi de coopération rapide !",options:["Même réponse","Réponses opposées","Réponse complémentaire"],pts:6,t:8},
+  {id:122,nom:"PART-07",type:"PARTAGE",emoji:"🔄",texte:"Échange une carte de ta main",options:["Ma meilleure carte","Ma pire carte","Carte au hasard"],pts:4,t:10},
+  {id:123,nom:"PART-08",type:"PARTAGE",emoji:"🗳️",texte:"Votez pour la réponse la plus créative",options:["Plus créative","Plus logique","Plus drôle"],pts:3,t:12},
+  {id:124,nom:"PART-09",type:"PARTAGE",emoji:"🌍",texte:"Si vous vous accordez, vous gagnez tous !",options:["Liberté","Joie","Aventure"],pts:2,t:10},
+  {id:125,nom:"PART-10",type:"PARTAGE",emoji:"🎀",texte:"Offre un objet de ta main à un joueur",options:["Objet de points","Objet défensif","Objet de chance"],pts:5,t:10},
+  {id:126,nom:"PART-11",type:"PARTAGE",emoji:"🔒",texte:"Qui parmi vous devinera ton choix secret ?",options:["Le meilleur joueur","Un joueur au hasard","Personne !"],pts:7,t:12},
+  {id:127,nom:"PART-12",type:"PARTAGE",emoji:"🆘",texte:"Viens en aide à un joueur en difficulté",options:["Indice direct","Indice indirect","Exemple concret"],pts:5,t:15},
+  {id:128,nom:"PART-13",type:"PARTAGE",emoji:"🤜",texte:"Même choix = bonus partagé !",options:["Oui toujours","Seulement cette fois","Non, vive la compétition"],pts:4,t:10},
+  {id:129,nom:"PART-14",type:"PARTAGE",emoji:"👫",texte:"Alliance — doublez vos points ensemble",options:["Points doublés","Points +50%","Points +3 fixes"],pts:8,t:12},
+  {id:130,nom:"PART-15",type:"PARTAGE",emoji:"💝",texte:"Si tu gagnes, qui partage ton bonus ?",options:["Ton voisin","Le dernier","Personne"],pts:5,t:10},
+  {id:131,nom:"PART-16",type:"PARTAGE",emoji:"🫂",texte:"Tous jouent la même option pour un méga-bonus",options:["Option A","Option B","Option C"],pts:7,t:10},
+  {id:132,nom:"PART-17",type:"PARTAGE",emoji:"🎯",texte:"Aide un joueur à choisir sa prochaine carte",options:["Carte offensive","Carte défensive","Carte bonus"],pts:5,t:12},
+  {id:133,nom:"PART-18",type:"PARTAGE",emoji:"🧩",texte:"Complétez la phrase ensemble",options:["Le ciel est...","La mer est...","La forêt est..."],pts:6,t:15},
+  {id:134,nom:"PART-19",type:"PARTAGE",emoji:"🌊",texte:"Vague de générosité ! Donne 2 pts",options:["Au dernier du classement","Au joueur le plus sympa","Au hasard"],pts:3,t:8},
+  {id:135,nom:"PART-20",type:"PARTAGE",emoji:"🎊",texte:"Fête collective : si 3 joueurs s'accordent",options:["Animal commun","Couleur commune","Mot commun"],pts:4,t:12},
+  {id:136,nom:"PART-21",type:"PARTAGE",emoji:"🤲",texte:"Prête ta carte la plus forte pendant 1 tour",options:["Je prête","Je garde","J'échange plutôt"],pts:6,t:10},
+  {id:137,nom:"PART-22",type:"PARTAGE",emoji:"💫",texte:"Combo amical : même choix = +5 pts chacun",options:["Chat","Chien","Oiseau"],pts:5,t:10},
+  {id:138,nom:"PART-23",type:"PARTAGE",emoji:"🎤",texte:"Un joueur choisit pour un autre",options:["Le meilleur choisit pour le dernier","Le dernier choisit pour le premier","Au hasard"],pts:6,t:12},
+  {id:139,nom:"PART-24",type:"PARTAGE",emoji:"🏅",texte:"Vote collectif : qui mérite un bonus ?",options:["Le plus créatif","Le plus rapide","Le plus drôle"],pts:3,t:12},
+  {id:140,nom:"PART-25",type:"PARTAGE",emoji:"🌸",texte:"Geste de paix : annule les malus ce tour",options:["Pour moi","Pour le dernier","Pour tout le monde"],pts:4,t:10},
+  {id:141,nom:"PART-26",type:"PARTAGE",emoji:"🔮",texte:"Alliance prophétique : pariez sur le même futur",options:["On gagnera tous","Il y aura un seul vainqueur","Match nul final"],pts:7,t:15},
+  {id:142,nom:"PART-27",type:"PARTAGE",emoji:"🌻",texte:"Boost d'équipe : tous jouent simultanément",options:["Option la plus rapide","Option la plus créative","Option surprise"],pts:5,t:8},
+  {id:143,nom:"PART-28",type:"PARTAGE",emoji:"🥊",texte:"Défi collectif : battez le record de groupe",options:["Record de vitesse","Record de créativité","Record de coopération"],pts:8,t:15},
+  {id:144,nom:"PART-29",type:"PARTAGE",emoji:"🌍",texte:"Mission mondiale : accordez-vous sur un rêve",options:["Paix universelle","Exploration spatiale","Fin de la faim"],pts:4,t:15},
+  {id:145,nom:"PART-30",type:"PARTAGE",emoji:"💎",texte:"Jackpot partagé : si tout le monde choisit pareil",options:["Diamant","Rubis","Émeraude"],pts:10,t:12},
+  // IMITATION (30)
+  {id:146,nom:"IMIT-01",type:"IMITATION",emoji:"📋",texte:"Copie la carte la plus jouée de cette partie",options:["La plus populaire","La deuxième","La troisième"],pts:4,t:10},
+  {id:147,nom:"IMIT-02",type:"IMITATION",emoji:"🌊",texte:"Suis la vague — quelle option domine ?",options:["Chat","Chien","Lapin"],pts:3,t:10},
+  {id:148,nom:"IMIT-03",type:"IMITATION",emoji:"🔃",texte:"CONTRE-TENDANCE : sois le seul différent !",options:["Pieuvre","Calamar géant","Méduse"],pts:8,t:12},
+  {id:149,nom:"IMIT-04",type:"IMITATION",emoji:"🪞",texte:"Imite exactement le choix du joueur précédent",options:["Animal","Couleur","Objet"],pts:4,t:8},
+  {id:150,nom:"IMIT-05",type:"IMITATION",emoji:"👑",texte:"Copie le choix du joueur en tête",options:["Son animal","Sa couleur","Son objet"],pts:5,t:10},
+  {id:151,nom:"IMIT-06",type:"IMITATION",emoji:"🌟",texte:"Suis le style le plus créatif de ce tour",options:["Plus originale","Plus drôle","Plus surprenante"],pts:6,t:12},
+  {id:152,nom:"IMIT-07",type:"IMITATION",emoji:"📈",texte:"Anticipe la tendance de la prochaine manche",options:["Chat","Licorne","Dragon"],pts:7,t:12},
+  {id:153,nom:"IMIT-08",type:"IMITATION",emoji:"↩️",texte:"Fais exactement le contraire de la majorité",options:["Nuit si jour","Froid si chaud","Silence si bruit"],pts:8,t:12},
+  {id:154,nom:"IMIT-09",type:"IMITATION",emoji:"👯",texte:"Jumeau de choix : même option = double bonus",options:["Toujours","Cette fois seulement","Jamais, je suis unique"],pts:6,t:10},
+  {id:155,nom:"IMIT-10",type:"IMITATION",emoji:"🎲",texte:"Imite un joueur au hasard — lequel ?",options:["Choix A","Choix B","Choix C"],pts:5,t:8},
+  {id:156,nom:"IMIT-11",type:"IMITATION",emoji:"🌐",texte:"Quelle tendance mondiale cette semaine ?",options:["PRÉDICTION","DÉFI","SURPRISE"],pts:4,t:10},
+  {id:157,nom:"IMIT-12",type:"IMITATION",emoji:"🔍",texte:"Choisis l'option que PERSONNE d'autre ne choisit !",options:["Option oubliée","Option rare","Option bizarre"],pts:9,t:15},
+  {id:158,nom:"IMIT-13",type:"IMITATION",emoji:"👀",texte:"Observe puis agis — ton meilleur move ?",options:["Suivre la tendance","Contre la tendance","Ma propre voie"],pts:5,t:15},
+  {id:159,nom:"IMIT-14",type:"IMITATION",emoji:"🔮",texte:"Anticipe les 2 prochaines cartes jouées",options:["Deux SURPRISE","DÉFI+PARTAGE","Deux PRÉDICTION"],pts:8,t:15},
+  {id:160,nom:"IMIT-15",type:"IMITATION",emoji:"🎭",texte:"Copie et améliore le choix de quelqu'un",options:["Ajouter couleur","Ajouter son","Ajouter mouvement"],pts:7,t:15},
+  {id:161,nom:"IMIT-16",type:"IMITATION",emoji:"🐒",texte:"Singe le style du joueur le plus drôle",options:["Sa blague","Son animal","Sa réponse bizarre"],pts:6,t:12},
+  {id:162,nom:"IMIT-17",type:"IMITATION",emoji:"🎪",texte:"Mime une action sans parler 30 secondes",options:["Nager","Voler","Manger une étoile"],pts:9,t:30},
+  {id:163,nom:"IMIT-18",type:"IMITATION",emoji:"🌀",texte:"Tourbillon : tout le monde imite le précédent",options:["Chat","Chien","Oiseau"],pts:5,t:8},
+  {id:164,nom:"IMIT-19",type:"IMITATION",emoji:"🦜",texte:"Répète le dernier mot dit à voix haute !",options:["Perroquet","Écho","Miroir"],pts:4,t:5},
+  {id:165,nom:"IMIT-20",type:"IMITATION",emoji:"🤖",texte:"Imite un robot qui joue à ce jeu",options:["Robot logique","Robot créatif","Robot aléatoire"],pts:7,t:15},
+  {id:166,nom:"IMIT-21",type:"IMITATION",emoji:"🌊",texte:"Surf sur la vague — rejoins la majorité !",options:["Vague 1","Vague 2","Vague 3"],pts:3,t:8},
+  {id:167,nom:"IMIT-22",type:"IMITATION",emoji:"🪄",texte:"Transforme le choix d'un joueur en plus grand",options:["×2","×5","×10"],pts:8,t:12},
+  {id:168,nom:"IMIT-23",type:"IMITATION",emoji:"🎠",texte:"Reprends le choix d'il y a 2 tours",options:["Choix ancien A","Choix ancien B","Choix ancien C"],pts:6,t:10},
+  {id:169,nom:"IMIT-24",type:"IMITATION",emoji:"🔁",texte:"Joue à l'envers : commence par la dernière option",options:["Option C","Option B","Option A"],pts:7,t:8},
+  {id:170,nom:"IMIT-25",type:"IMITATION",emoji:"🎯",texte:"Vise le milieu : ni le plus ni le moins choisi",options:["2ème rang","Centre","Milieu exact"],pts:8,t:12},
+  {id:171,nom:"IMIT-26",type:"IMITATION",emoji:"💫",texte:"Copie le choix gagnant du tour dernier",options:["Gagnant A","Gagnant B","Je joue ma propre carte"],pts:6,t:10},
+  {id:172,nom:"IMIT-27",type:"IMITATION",emoji:"🌙",texte:"Reproduis le scénario d'une manche passée",options:["Manche 1","Manche 2","Manche 3"],pts:7,t:15},
+  {id:173,nom:"IMIT-28",type:"IMITATION",emoji:"🦈",texte:"Suis le mouvement ou sois dévoré",options:["Nage avec eux","Plonge au fond","Sors de l'eau"],pts:7,t:10},
+  {id:174,nom:"IMIT-29",type:"IMITATION",emoji:"🎵",texte:"Harmonie : joue la même note que le groupe",options:["Do","Ré","Mi"],pts:5,t:10},
+  {id:175,nom:"IMIT-30",type:"IMITATION",emoji:"🏄",texte:"SURF EXTRÊME : contre-tendance radicale !",options:["L'opposé absolu","Le contraire logique","L'inattendu total"],pts:10,t:12},
+  // DÉFI (45)
+  {id:176,nom:"DÉFI-01",type:"DEFI",emoji:"💬",texte:"Décris un dragon en exactement 3 mots",options:["Majestueux+Mystérieux+Bleu","Féroce+Rapide+Sage","Brillant+Doux+Fort"],pts:6,t:20},
+  {id:177,nom:"DÉFI-02",type:"DEFI",emoji:"🧩",texte:"Quelle couleur vont-ils TOUS choisir ?",options:["Bleu ciel","Rouge feu","Vert nature"],pts:7,t:12},
+  {id:178,nom:"DÉFI-03",type:"DEFI",emoji:"🎭",texte:"Fais deviner ton animal sans parler !",options:["Emoji","Dessin","Mime"],pts:8,t:30},
+  {id:179,nom:"DÉFI-04",type:"DEFI",emoji:"⏱️",texte:"SPRINT — Premier animal en 5 SECONDES !",options:["Chat","Chien","Éléphant"],pts:10,t:5},
+  {id:180,nom:"DÉFI-05",type:"DEFI",emoji:"🔗",texte:"Associe deux objets qui n'ont rien à voir",options:["Chapeau+Fusée","Chaussure+Nuage","Livre+Flamme"],pts:7,t:20},
+  {id:181,nom:"DÉFI-06",type:"DEFI",emoji:"🎤",texte:"Phrase absurde animal+objet+verbe bizarre",options:["Le pingouin mange du wifi","Le chat répare l'espace","Le chien pilote la lune"],pts:8,t:25},
+  {id:182,nom:"DÉFI-07",type:"DEFI",emoji:"🎵",texte:"Quel son unique représente ton animal ?",options:["Mélodie douce","Beat électro","Silence mystérieux"],pts:7,t:15},
+  {id:183,nom:"DÉFI-08",type:"DEFI",emoji:"🏃",texte:"ULTRA SPRINT — Couleur en 3 SECONDES !",options:["Rouge","Bleu","Vert"],pts:12,t:3},
+  {id:184,nom:"DÉFI-09",type:"DEFI",emoji:"🧮",texte:"Quelle combo de cartes est la plus forte ?",options:["PRÉDICTION+BONUS","SURPRISE+PARTAGE","DÉFI+MONDIAL"],pts:9,t:20},
+  {id:185,nom:"DÉFI-10",type:"DEFI",emoji:"🎪",texte:"Fais deviner ton choix autrement",options:["Indice cryptique","Dessin rapide","Son bizarre"],pts:8,t:25},
+  {id:186,nom:"DÉFI-11",type:"DEFI",emoji:"😊",texte:"Réponds uniquement avec 3 emojis",options:["🦁🌟💪","🐙🌊✨","🦋🌸💫"],pts:6,t:12},
+  {id:187,nom:"DÉFI-12",type:"DEFI",emoji:"🤪",texte:"Action ridicule que personne n'oserait faire",options:["Chanter sa réponse","La dire à l'envers","La danser"],pts:9,t:20},
+  {id:188,nom:"DÉFI-13",type:"DEFI",emoji:"📖",texte:"Comment finit l'histoire de ton animal ?",options:["Happy end","Twist imprévu","Fin mystérieuse"],pts:10,t:30},
+  {id:189,nom:"DÉFI-14",type:"DEFI",emoji:"🔭",texte:"Objet que PERSONNE n'a pensé — sois unique",options:["Règle en bois","Gomme","Taille-crayon"],pts:8,t:15},
+  {id:190,nom:"DÉFI-15",type:"DEFI",emoji:"🧬",texte:"Fusion animale totalement inédite !",options:["Requin+Papillon","Girafe+Pieuvre","Loup+Colibri"],pts:9,t:20},
+  {id:191,nom:"DÉFI-16",type:"DEFI",emoji:"⚡",texte:"TURBO — Réponds en moins de 2 secondes !",options:["Pizza","Soleil","Chien"],pts:14,t:2},
+  {id:192,nom:"DÉFI-17",type:"DEFI",emoji:"🌋",texte:"Si tu étais un volcan, comment exploserais-tu ?",options:["Doucement avec des fleurs","Avec des confettis","Avec de la musique"],pts:8,t:20},
+  {id:193,nom:"DÉFI-18",type:"DEFI",emoji:"🎯",texte:"Vise l'option la MOINS évidente",options:["L'oubliée","La rare","La cachée"],pts:9,t:12},
+  {id:194,nom:"DÉFI-19",type:"DEFI",emoji:"🦁",texte:"Rugis ton choix comme un lion !",options:["Proie rapide","Territoire vaste","Meute loyale"],pts:7,t:15},
+  {id:195,nom:"DÉFI-20",type:"DEFI",emoji:"🧊",texte:"Réponse la plus froide possible",options:["Glacier éternel","Vent arctique","Silence polaire"],pts:7,t:15},
+  {id:196,nom:"DÉFI-21",type:"DEFI",emoji:"🌀",texte:"Choisis les yeux fermés !",options:["Option A","Option B","Option C"],pts:8,t:8},
+  {id:197,nom:"DÉFI-22",type:"DEFI",emoji:"🎲",texte:"Lance mentalement un dé — que tombe-t-il ?",options:["1-2","3-4","5-6"],pts:6,t:8},
+  {id:198,nom:"DÉFI-23",type:"DEFI",emoji:"🔥",texte:"Si tu étais du feu, quelle intensité ?",options:["Bougie douce","Feu de camp","Incendie de forêt"],pts:7,t:12},
+  {id:199,nom:"DÉFI-24",type:"DEFI",emoji:"🌊",texte:"Si tu étais une vague, laquelle ?",options:["Vaguette douce","Vague de surfer","Tsunami géant"],pts:7,t:12},
+  {id:200,nom:"DÉFI-25",type:"DEFI",emoji:"🎸",texte:"Solo de guitare — quel style sans parler ?",options:["Rock intense","Flamenco passionné","Jazz cool"],pts:8,t:20},
+  {id:201,nom:"DÉFI-26",type:"DEFI",emoji:"🌙",texte:"Décris la nuit en un seul mot — vite !",options:["Mystérieuse","Douce","Infinie"],pts:6,t:5},
+  {id:202,nom:"DÉFI-27",type:"DEFI",emoji:"🐉",texte:"Quelle attaque de dragon es-tu ?",options:["Souffle de feu","Queue foudroyante","Rugissement paralysant"],pts:8,t:12},
+  {id:203,nom:"DÉFI-28",type:"DEFI",emoji:"🤸",texte:"Imite un animal en mouvement",options:["Serpent qui glisse","Singe qui saute","Aigle qui plane"],pts:9,t:20},
+  {id:204,nom:"DÉFI-29",type:"DEFI",emoji:"🍕",texte:"Pizza parfaite en 3 mots — GO !",options:["Fromage+Feu+Joie","Pâte+Sauce+Rêve","Crunch+Goût+Magie"],pts:6,t:10},
+  {id:205,nom:"DÉFI-30",type:"DEFI",emoji:"🧠",texte:"Pense à un nombre... maintenant triple-le !",options:["Résultat pair","Résultat impair","Résultat magique"],pts:7,t:15},
+  {id:206,nom:"DÉFI-31",type:"DEFI",emoji:"🌈",texte:"La couleur de ton humeur en ce moment !",options:["Orange dynamique","Bleu calme","Vert joyeux"],pts:5,t:8},
+  {id:207,nom:"DÉFI-32",type:"DEFI",emoji:"🪐",texte:"Quelle planète tu habites dans cette vie ?",options:["Planète Créativité","Planète Vitesse","Planète Mystère"],pts:8,t:15},
+  {id:208,nom:"DÉFI-33",type:"DEFI",emoji:"🎩",texte:"Que sort le magicien du chapeau ?",options:["Lapin géant","Dragon miniature","Galaxie entière"],pts:8,t:12},
+  {id:209,nom:"DÉFI-34",type:"DEFI",emoji:"🚂",texte:"Ton train de pensées s'arrête où ?",options:["Gare du Rêve","Station Créativité","Terminus Mystère"],pts:6,t:15},
+  {id:210,nom:"DÉFI-35",type:"DEFI",emoji:"🌺",texte:"Quelle fleur tu serais si tu étais végétal ?",options:["Tournesol ardent","Rose mystérieuse","Orchidée rare"],pts:6,t:12},
+  {id:211,nom:"DÉFI-36",type:"DEFI",emoji:"💡",texte:"Ton idée de génie en 3 mots — maintenant !",options:["Simple+Brillant+Vrai","Fou+Beau+Inédit","Logique+Fort+Clair"],pts:8,t:12},
+  {id:212,nom:"DÉFI-37",type:"DEFI",emoji:"🌊",texte:"Nage jusqu'à la réponse sans réfléchir !",options:["Premier instinct","Deuxième pensée","Troisième feeling"],pts:7,t:6},
+  {id:213,nom:"DÉFI-38",type:"DEFI",emoji:"🎯",texte:"Bullseye — vise exactement le centre !",options:["Option du centre","Option de gauche","Option de droite"],pts:9,t:8},
+  {id:214,nom:"DÉFI-39",type:"DEFI",emoji:"🏆",texte:"Ta stratégie de victoire en 1 mot !",options:["Rapidité","Créativité","Anticipation"],pts:7,t:8},
+  {id:215,nom:"DÉFI-40",type:"DEFI",emoji:"⭐",texte:"Ton étoile personnelle brille comment ?",options:["Intense et dorée","Douce et bleue","Rapide et argentée"],pts:7,t:12},
+  {id:216,nom:"DÉFI-41",type:"DEFI",emoji:"🔑",texte:"Quelle porte ouvrir en premier ?",options:["Porte du passé","Porte du présent","Porte du futur"],pts:7,t:10},
+  {id:217,nom:"DÉFI-42",type:"DEFI",emoji:"🌪️",texte:"TORNADO — réponds avant que la tornade passe !",options:["Abri","Courir","Voler dedans"],pts:11,t:4},
+  {id:218,nom:"DÉFI-43",type:"DEFI",emoji:"🧨",texte:"Boom ! Réponse explosive en 4 secondes !",options:["Bang A","Boom B","Explosion C"],pts:12,t:4},
+  {id:219,nom:"DÉFI-44",type:"DEFI",emoji:"🎀",texte:"Offre une réponse enveloppée dans un cadeau !",options:["Cadeau surprise","Cadeau réfléchi","Cadeau instantané"],pts:6,t:15},
+  {id:220,nom:"DÉFI-45",type:"DEFI",emoji:"🌟",texte:"Quelle étoile choisir dans la Voie Lactée ?",options:["Étoile rouge géante","Naine blanche","Pulsar"],pts:9,t:15},
+  // MONDIAL (20)
+  {id:221,nom:"GLOB-01",type:"MONDIAL",emoji:"🌍",texte:"Vote mondial — quel animal domine la Terre ?",options:["Chat","Chien","Dauphin"],pts:3,t:15},
+  {id:222,nom:"GLOB-02",type:"MONDIAL",emoji:"💭",texte:"Créez un néologisme mondial ensemble !",options:["Flurpex","Gloubix","Zarbof"],pts:5,t:20},
+  {id:223,nom:"GLOB-03",type:"MONDIAL",emoji:"🏅",texte:"Votez pour la meilleure catégorie mondiale",options:["Plus original","Plus drôle","Plus surprenant"],pts:4,t:15},
+  {id:224,nom:"GLOB-04",type:"MONDIAL",emoji:"💫",texte:"L'objet le moins choisi rapporte le jackpot !",options:["Livre","Chaise","Crayon"],pts:8,t:12},
+  {id:225,nom:"GLOB-05",type:"MONDIAL",emoji:"🤲",texte:"Quel élément naturel rassemble l'humanité ?",options:["Eau","Feu","Vent"],pts:4,t:15},
+  {id:226,nom:"GLOB-06",type:"MONDIAL",emoji:"⏰",texte:"60 secondes pour inventer un animal fantastique !",options:["Dragon Arc-en-ciel","Phénix de Glace","Loup Céleste"],pts:7,t:60},
+  {id:227,nom:"GLOB-07",type:"MONDIAL",emoji:"📣",texte:"Quel animal gagnerait un vote mondial ?",options:["Lion","Tigre","Ours"],pts:3,t:10},
+  {id:228,nom:"GLOB-08",type:"MONDIAL",emoji:"🏆",texte:"Quelle réponse mérite un Oscar ?",options:["La plus originale","La plus bizarre","La plus belle"],pts:5,t:15},
+  {id:229,nom:"GLOB-09",type:"MONDIAL",emoji:"🗣️",texte:"Quel mot tout le monde choisirait sur Terre ?",options:["Paix","Amour","Aventure"],pts:4,t:15},
+  {id:230,nom:"GLOB-10",type:"MONDIAL",emoji:"⭐",texte:"Accord total = bonus pour tous !",options:["Éléphant","Baleine","Aigle"],pts:2,t:12},
+  {id:231,nom:"GLOB-11",type:"MONDIAL",emoji:"🌐",texte:"La tendance mondiale du moment, c'est ?",options:["Intelligence artificielle","Écologie","Exploration spatiale"],pts:5,t:15},
+  {id:232,nom:"GLOB-12",type:"MONDIAL",emoji:"🗺️",texte:"Quel continent le plus puissant en 2050 ?",options:["Asie","Afrique","Amériques"],pts:7,t:15},
+  {id:233,nom:"GLOB-13",type:"MONDIAL",emoji:"🌱",texte:"Quelle invention sauverait l'humanité ?",options:["Énergie infinie","Médecine parfaite","Voyage dans le temps"],pts:8,t:20},
+  {id:234,nom:"GLOB-14",type:"MONDIAL",emoji:"🚀",texte:"Quelle planète coloniser en premier ?",options:["Mars","Europe (lune)","Titan"],pts:6,t:15},
+  {id:235,nom:"GLOB-15",type:"MONDIAL",emoji:"🎯",texte:"Objectif mondial commun : lequel atteindre ?",options:["Fin des guerres","Contact extraterrestre","Immortalité"],pts:7,t:20},
+  {id:236,nom:"GLOB-16",type:"MONDIAL",emoji:"🦁",texte:"Quel animal protéger en priorité mondiale ?",options:["Tigre","Baleine bleue","Gorille"],pts:5,t:15},
+  {id:237,nom:"GLOB-17",type:"MONDIAL",emoji:"🌊",texte:"Quel océan cache un trésor mondial ?",options:["Pacifique","Atlantique","Indien"],pts:6,t:12},
+  {id:238,nom:"GLOB-18",type:"MONDIAL",emoji:"🎵",texte:"Quelle chanson représenterait l'humanité ?",options:["Une chanson de paix","Un hymne de victoire","Une mélodie de rêve"],pts:6,t:15},
+  {id:239,nom:"GLOB-19",type:"MONDIAL",emoji:"🌺",texte:"Quelle fleur symbolise le monde entier ?",options:["Lotus","Rose","Tournesol"],pts:5,t:12},
+  {id:240,nom:"GLOB-20",type:"MONDIAL",emoji:"🤝",texte:"Quel geste universel de paix ?",options:["Main levée ouverte","Sourire","Nœud papillon"],pts:4,t:12},
+  // BONUS (10)
+  {id:241,nom:"BONX-01",type:"BONUS",emoji:"📈",texte:"3 réussites consécutives = DOUBLE POINTS !",options:["Accepter le défi","Passer ce tour","Vérifier mes stats"],pts:15,t:10},
+  {id:242,nom:"BONX-02",type:"BONUS",emoji:"💎",texte:"Choix ultra-rare = JACKPOT TOTAL !",options:["Choix ultra-rare","Choix rare","Choix commun"],pts:20,t:12},
+  {id:243,nom:"BONX-03",type:"BONUS",emoji:"🎊",texte:"Objet magique selon la majorité",options:["Épée de lumière","Bouclier d'étoiles","Arc prismatique"],pts:12,t:15},
+  {id:244,nom:"BONX-04",type:"BONUS",emoji:"🃏",texte:"JOKER — Remplace n'importe quelle carte !",options:["Utiliser maintenant","Garder pour plus tard","Offrir à un joueur"],pts:10,t:8},
+  {id:245,nom:"BONX-05",type:"BONUS",emoji:"🔐",texte:"Carte secrète = double points dans le futur",options:["Garder 3 tours","Jouer maintenant","Vendre à un joueur"],pts:25,t:10},
+  {id:246,nom:"BONX-06",type:"BONUS",emoji:"⚡",texte:"Éclair de génie : réponse parfaite = +20 pts",options:["Tenter le tout","Jouer prudent","Passer"],pts:20,t:8},
+  {id:247,nom:"BONX-07",type:"BONUS",emoji:"🌟",texte:"Étoile du destin : multiplie tes points x3 !",options:["Activer x3","Activer x2","Garder pour plus tard"],pts:18,t:10},
+  {id:248,nom:"BONX-08",type:"BONUS",emoji:"🔮",texte:"Boule de cristal : prédit ton bonus futur",options:["Bonus garanti","Bonus risqué","Bonus mystère"],pts:15,t:12},
+  {id:249,nom:"BONX-09",type:"BONUS",emoji:"🎯",texte:"Bullseye ultime : vise le jackpot absolu",options:["Jackpot total","Demi-jackpot","Un point sûr"],pts:22,t:10},
+  {id:250,nom:"BONX-10",type:"BONUS",emoji:"🏆",texte:"Trophée légendaire : la carte la plus rare !",options:["Jouer maintenant","Économiser","Offrir pour l'alliance"],pts:30,t:15}
+];
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let state = {
+  screen: 'welcome',
+  selectedIcon: 0,
+  selectedDiff: 'medium',
+  numPlayers: 2,
+  currentSub: 'sub-main',
+  roomCode: null,
+  joinCode: null,
+  myPlayerId: null,
+  // game state
+  players: [],
+  scores: {},
+  hand: [],
+  round: 1,
+  phase: 'select', // select | play | result | pass_device
+  activeIdx: 0,
+  selectedCard: null,
+  playedCard: null,
+  chosenOpt: null,
+  aiChosenOpt: null,
+  streak: 0,
+  ptsRound: {},
+  timerInterval: null,
+  timerLeft: 0,
+  lastConfig: null,
+};
+
+// ══════════════════════════════════════════════════════
+// FIREBASE — chargement dynamique garanti
+// ══════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDkqVl7WOJBc-g-4KMdt-dszr9RA4uON2M",
+  authDomain: "echo-8e643.firebaseapp.com",
+  databaseURL: "https://echo-8e643-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "echo-8e643",
+  storageBucket: "echo-8e643.firebasestorage.app",
+  messagingSenderId: "96668933993",
+  appId: "1:96668933993:web:c2dfbc42597f2f986267f8"
+};
+
+let db = null;
+let fbListeners = [];
+
+function fbOff() {
+  fbListeners.forEach(({ ref, event, fn }) => ref.off(event, fn));
+  fbListeners = [];
+}
+function fbOn(ref, event, fn) {
+  ref.on(event, fn);
+  fbListeners.push({ ref, event, fn });
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function initFirebase() {
+  try {
+    await loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js');
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    console.log('✅ Firebase connecté');
+  } catch(e) {
+    console.warn('⚠️ Firebase indisponible — mode hors-ligne uniquement', e);
+    db = null;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+function getRand(arr, n) {
+  return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+}
+function san(s) {
+  return String(s).replace(/[<>&"'`]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c]));
+}
+function genCode() {
+  return Math.random().toString(36).substr(2, 5).toUpperCase();
+}
+function el(id) { return document.getElementById(id); }
+
+// ══════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg, color = 'var(--orange)') {
+  const t = el('toast');
+  t.textContent = msg;
+  t.style.borderColor = color;
+  t.style.color = color;
+  t.style.boxShadow = `0 0 22px ${color}66`;
+  t.classList.remove('hidden');
+  t.style.animation = 'none';
+  void t.offsetWidth;
+  t.style.animation = 'slideT .2s ease';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add('hidden'), 2800);
+}
+
+// ══════════════════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ══════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  el(id).classList.add('active');
+  state.screen = id;
+  if (id === 'screen-welcome') {
+    gotoSub('sub-main');
+    stopTimer();
+    fbOff();
+  }
+}
+
+function gotoSub(subId) {
+  document.querySelectorAll('.sub-screen').forEach(s => s.classList.remove('active'));
+  el(subId).classList.add('active');
+  state.currentSub = subId;
+  if (subId === 'sub-local') renderLocalNames();
+}
+
+// ══════════════════════════════════════════════════════
+// WELCOME INIT
+// ══════════════════════════════════════════════════════
+function initWelcome() {
+  // Icon grid
+  const ig = el('icon-grid');
+  ig.innerHTML = '';
+  PLAYER_ICONS.forEach((ic, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'icon-btn' + (i === state.selectedIcon ? ' active' : '');
+    btn.textContent = ic;
+    btn.onclick = () => {
+      state.selectedIcon = i;
+      ig.querySelectorAll('.icon-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+    };
+    ig.appendChild(btn);
+  });
+
+  // Difficulty grid
+  const dg = el('diff-grid');
+  dg.innerHTML = '';
+  Object.entries(AI_PROFILES).forEach(([k, p]) => {
+    const btn = document.createElement('button');
+    btn.className = 'diff-btn' + (k === state.selectedDiff ? ' active' : '');
+    btn.style.borderColor = k === state.selectedDiff ? p.color : '';
+    btn.style.color = k === state.selectedDiff ? p.color : '';
+    btn.innerHTML = `<div class="diff-name">${p.label}</div><div class="diff-sub">Précision ${Math.round(p.accuracy * 100)}%</div>`;
+    btn.onclick = () => {
+      state.selectedDiff = k;
+      dg.querySelectorAll('.diff-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.borderColor = '';
+        b.style.color = '';
+      });
+      btn.classList.add('active');
+      btn.style.borderColor = p.color;
+      btn.style.color = p.color;
+    };
+    dg.appendChild(btn);
+  });
+
+  // Num players
+  const nr = el('np-row');
+  nr.innerHTML = '';
+  [2,3,4,5,6].forEach(n => {
+    const btn = document.createElement('button');
+    btn.className = 'np-btn' + (n === state.numPlayers ? ' active' : '');
+    btn.textContent = n;
+    btn.onclick = () => {
+      state.numPlayers = n;
+      nr.querySelectorAll('.np-btn').forEach((b, i) => b.classList.toggle('active', i + 2 === n));
+      renderLocalNames();
+    };
+    nr.appendChild(btn);
+  });
+
+  // Manual type chips
+  const tc = el('type-chips');
+  if (tc) {
+    tc.innerHTML = Object.entries(TYPE_META).map(([k, m]) =>
+      `<span class="type-chip" style="background:${m.color}18;color:${m.color};border:1px solid ${m.color}44">${k}</span>`
+    ).join('');
+  }
+  const td = el('type-descriptions');
+  if (td) {
+    td.innerHTML = Object.entries(TYPE_META).map(([k, m]) =>
+      `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <span class="type-chip" style="background:${m.color}18;color:${m.color};border:1px solid ${m.color}44;margin-bottom:6px">${k}</span>
+        <p style="font-size:clamp(.75rem,2.3vw,.88rem);color:var(--dim);line-height:1.65">${TYPE_DESCS[k]}</p>
+      </div>`
+    ).join('');
+  }
+}
+
+function renderLocalNames() {
+  const container = el('local-names');
+  container.innerHTML = '';
+  for (let i = 0; i < state.numPlayers; i++) {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.innerHTML = `<span class="player-icon">${PLAYER_ICONS[i]}</span>
+      <input type="text" class="input-text" style="margin:0;flex:1;border-color:${PLAYER_COLORS[i]}44" 
+        placeholder="Joueur ${i+1}" maxlength="14" id="ln-${i}" value="${state[`lname${i}`] || ''}">`;
+    container.appendChild(row);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// START MODES
+// ══════════════════════════════════════════════════════
+function getMyName() {
+  return san((el('player-name')?.value || '').trim()) || 'Joueur';
+}
+
+function startSolo() {
+  const name = getMyName();
+  state.lastConfig = {
+    mode: 'solo',
+    players: [{id:'p1',name,color:PLAYER_COLORS[0],icon:PLAYER_ICONS[state.selectedIcon],isAI:false}],
+    activePlayerId: 'p1'
+  };
+  startGame(state.lastConfig);
+}
+
+function startVsAI() {
+  const name = getMyName();
+  const prof = AI_PROFILES[state.selectedDiff];
+  state.lastConfig = {
+    mode: 'vs_ai',
+    players: [
+      {id:'p1',name,color:PLAYER_COLORS[0],icon:PLAYER_ICONS[state.selectedIcon],isAI:false},
+      {id:'ai',name:`IA — ${prof.label}`,color:prof.color,icon:'🤖',isAI:true,difficulty:state.selectedDiff}
+    ],
+    activePlayerId: 'p1'
+  };
+  startGame(state.lastConfig);
+}
+
+function startLocal() {
+  const players = [];
+  for (let i = 0; i < state.numPlayers; i++) {
+    const nameEl = el(`ln-${i}`);
+    const n = san((nameEl?.value || '').trim()) || `Joueur ${i+1}`;
+    players.push({id:`p${i}`,name:n,color:PLAYER_COLORS[i],icon:PLAYER_ICONS[i],isAI:false});
+  }
+  state.lastConfig = {mode:'local',players,activePlayerId:players[0].id};
+  startGame(state.lastConfig);
+}
+
+// ══════════════════════════════════════════════════════
+// ONLINE MULTIPLAYER — FIREBASE REALTIME DATABASE
+// ══════════════════════════════════════════════════════
+
+function createRoom() {
+  if (!db) { showToast('⚠️ Firebase non connecté — réessaie', 'var(--red)'); return; }
+  const code = genCode();
+  const host = {
+    id: 'p1',
+    name: getMyName(),
+    color: PLAYER_COLORS[0],
+    icon: PLAYER_ICONS[state.selectedIcon],
+    isAI: false
+  };
+  state.roomCode = code;
+  state.myPlayerId = 'p1';
+
+  // Write room to Firebase
+  db.ref('rooms/' + code).set({
+    code,
+    hostId: 'p1',
+    phase: 'lobby',
+    players: { p1: host },
+    createdAt: Date.now()
+  }).then(() => {
+    el('room-code-display').textContent = code;
+    gotoSub('sub-online-host');
+    listenRoomHost(code);
+  }).catch(err => {
+    showToast('Erreur connexion Firebase', 'var(--red)');
+    console.error(err);
+  });
+}
+
+function listenRoomHost(code) {
+  fbOff();
+  const roomRef = db.ref('rooms/' + code);
+  const fn = snap => {
+    const room = snap.val();
+    if (!room) return;
+    const players = Object.values(room.players || {});
+    renderRoomPlayersList(players);
+    // If room phase changed to playing (host clicked launch), start game
+    if (room.phase === 'playing' && state.screen === 'screen-welcome') {
+      fbOff();
+      const orderedPlayers = players.sort((a,b) => a.id.localeCompare(b.id));
+      state.lastConfig = { mode:'online', roomCode:code, players:orderedPlayers, activePlayerId:'p1' };
+      startGame(state.lastConfig);
+    }
+  };
+  fbOn(roomRef, 'value', fn);
+}
+
+function renderRoomPlayersList(players) {
+  const list = el('room-players-list');
+  const label = el('room-players-label');
+  const launchBtn = el('launch-btn');
+  const waitMsg = el('room-wait-msg');
+  if (!list) return;
+  const sorted = [...players].sort((a,b) => a.id.localeCompare(b.id));
+  label.textContent = `// JOUEURS (${sorted.length}/6)`;
+  list.innerHTML = sorted.map((p, i) =>
+    `<div class="room-player" style="border-color:${p.color}44">
+      <span style="font-size:1.1rem">${p.icon}</span>
+      <span style="font-family:'Barlow',sans-serif;font-size:clamp(.75rem,2.3vw,.88rem);color:${p.color};font-weight:700;flex:1">${san(p.name)}</span>
+      ${i === 0 ? '<span style="font-family:\'DM Mono\',monospace;font-size:.48rem;color:var(--dim)">HÔTE</span>' : ''}
+      <div class="pulse" style="width:7px;height:7px;border-radius:50%;background:var(--green)"></div>
+    </div>`
+  ).join('');
+  const ready = sorted.length >= 2;
+  launchBtn.disabled = !ready;
+  launchBtn.style.opacity = ready ? '1' : '0.4';
+  if (waitMsg) waitMsg.style.display = ready ? 'none' : 'block';
+}
+
+function joinRoom() {
+  if (!db) { showToast('⚠️ Firebase non connecté — réessaie', 'var(--red)'); return; }
+  const code = (el('join-code-input')?.value || '').toUpperCase().trim();
+  const errEl = el('join-error');
+  if (!code || code.length < 3) {
+    errEl.textContent = 'Entre un code valide.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+
+  const roomRef = db.ref('rooms/' + code);
+  roomRef.once('value').then(snap => {
+    const room = snap.val();
+    if (!room) {
+      errEl.textContent = 'Salon introuvable. Vérifie le code.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (room.phase !== 'lobby') {
+      errEl.textContent = 'La partie a déjà commencé.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    const players = Object.values(room.players || {});
+    if (players.length >= 6) {
+      errEl.textContent = 'Salon plein (6 joueurs max).';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    // Assign player id based on current count
+    const pIdx = players.length;
+    const pId = `p${pIdx + 1}`;
+    const newPlayer = {
+      id: pId,
+      name: getMyName(),
+      color: PLAYER_COLORS[pIdx],
+      icon: PLAYER_ICONS[pIdx],
+      isAI: false
+    };
+    state.roomCode = code;
+    state.myPlayerId = pId;
+    state.joinCode = code;
+
+    // Write new player into Firebase room
+    db.ref('rooms/' + code + '/players/' + pId).set(newPlayer).then(() => {
+      el('joined-code').textContent = code;
+      gotoSub('sub-online-join-wait');
+      listenRoomJoiner(code, pId);
+    });
+  }).catch(err => {
+    errEl.textContent = 'Erreur de connexion. Réessaie.';
+    errEl.classList.remove('hidden');
+    console.error(err);
+  });
+}
+
+function listenRoomJoiner(code, myId) {
+  fbOff();
+  const roomRef = db.ref('rooms/' + code);
+  const fn = snap => {
+    const room = snap.val();
+    if (!room) return;
+    if (room.phase === 'playing') {
+      fbOff();
+      const players = Object.values(room.players || {}).sort((a,b) => a.id.localeCompare(b.id));
+      state.lastConfig = { mode:'online', roomCode:code, players, activePlayerId: myId };
+      startGame(state.lastConfig);
+    }
+  };
+  fbOn(roomRef, 'value', fn);
+}
+
+function launchOnline() {
+  if (!state.roomCode) return;
+  db.ref('rooms/' + state.roomCode).once('value').then(snap => {
+    const room = snap.val();
+    if (!room) return;
+    const players = Object.values(room.players || {});
+    if (players.length < 2) return;
+    // Set phase to playing — all listeners will pick this up
+    db.ref('rooms/' + state.roomCode + '/phase').set('playing');
+  });
+}
+
+function leaveRoom() {
+  fbOff();
+  // If we created the room, delete it
+  if (state.roomCode && state.myPlayerId === 'p1') {
+    db.ref('rooms/' + state.roomCode).remove();
+  } else if (state.roomCode && state.myPlayerId) {
+    // Just remove ourselves
+    db.ref('rooms/' + state.roomCode + '/players/' + state.myPlayerId).remove();
+  }
+  state.roomCode = null;
+  state.joinCode = null;
+  state.myPlayerId = null;
+  gotoSub('sub-main');
+}
+
+// Clean up old rooms (> 2 hours) on load to keep Firebase tidy
+function cleanOldRooms() {
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+  db.ref('rooms').orderByChild('createdAt').endAt(cutoff).once('value', snap => {
+    snap.forEach(child => child.ref.remove());
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// GAME ENGINE
+// ══════════════════════════════════════════════════════
+function startGame(config) {
+  const { players } = config;
+  state.players = players;
+  state.scores = Object.fromEntries(players.map(p => [p.id, 0]));
+  state.hand = getRand(CARDS, 5);
+  state.round = 1;
+  state.phase = 'select';
+  state.activeIdx = 0;
+  state.selectedCard = null;
+  state.playedCard = null;
+  state.chosenOpt = null;
+  state.aiChosenOpt = null;
+  state.streak = 0;
+  state.ptsRound = {};
+  showScreen('screen-game');
+  renderGame();
+}
+
+function getActivePlayer() {
+  return state.players[state.activeIdx] || state.players[0];
+}
+
+function renderGame() {
+  const { players, scores, round, phase, activeIdx } = state;
+  const ap = getActivePlayer();
+
+  // HUD
+  el('hud-rnd').textContent = String(round).padStart(2, '0');
+  el('progress-fill').style.width = `${(round / 10) * 100}%`;
+  const streakEl = el('hud-streak');
+  if (state.streak >= 2) {
+    streakEl.textContent = `STK×${state.streak}`;
+    streakEl.classList.remove('hidden');
+  } else {
+    streakEl.classList.add('hidden');
+  }
+
+  // Score bar
+  const sb = el('score-bar');
+  sb.innerHTML = players.map(p =>
+    `<div class="score-chip${p.id === ap.id ? ' active' : ''}">
+      <span style="font-size:clamp(.68rem,2.2vw,.88rem)">${p.icon}</span>
+      <div>
+        <div class="score-name">${san(p.name).slice(0,8)}</div>
+        <div class="score-val" style="color:${p.color}">${scores[p.id] || 0}</div>
+      </div>
+    </div>`
+  ).join('');
+
+  renderPhase();
+}
+
+function renderPhase() {
+  const gc = el('game-content');
+  gc.innerHTML = '';
+
+  const { phase } = state;
+  if (phase === 'select') renderSelect(gc);
+  else if (phase === 'play') renderPlay(gc);
+  else if (phase === 'result') renderResult(gc);
+  else if (phase === 'pass_device') renderPassDevice(gc);
+}
+
+// ── SELECT ──
+function renderSelect(gc) {
+  const ap = getActivePlayer();
+  const config = state.lastConfig;
+  const isLocal = config?.mode === 'local';
+
+  if (isLocal) {
+    const bar = document.createElement('div');
+    bar.className = 'player-turn-bar anim-up';
+    bar.style.cssText = `background:${ap.color}14;border-color:${ap.color}44`;
+    bar.innerHTML = `<span style="font-size:1rem">${ap.icon}</span><span style="font-size:clamp(.68rem,2.1vw,.8rem);color:${ap.color};font-weight:800">Tour de ${san(ap.name)}</span>`;
+    gc.appendChild(bar);
+  }
+
+  const label = document.createElement('div');
+  label.className = 'ms anim-up';
+  label.textContent = '// MAIN — CHOISIR UNE CARTE';
+  gc.appendChild(label);
+
+  const handGrid = document.createElement('div');
+  handGrid.className = 'hand-grid anim-up';
+  state.hand.forEach(card => {
+    const m = TYPE_META[card.type] || TYPE_META.BONUS;
+    const tile = document.createElement('button');
+    tile.className = 'card-tile' + (state.selectedCard?.id === card.id ? ' selected' : '');
+    tile.innerHTML = `<div class="card-emoji">${card.emoji}</div><div class="card-nom" style="color:${m.color}">${card.nom}</div><div class="card-pts">+${card.pts}</div>`;
+    tile.onclick = () => {
+      state.selectedCard = card;
+      renderPhase();
+    };
+    handGrid.appendChild(tile);
+  });
+  gc.appendChild(handGrid);
+
+  if (state.selectedCard) {
+    const sc = state.selectedCard;
+    const m = TYPE_META[sc.type] || TYPE_META.BONUS;
+    const detail = document.createElement('div');
+    detail.className = 'panel card-detail anim-up';
+    detail.innerHTML = `
+      <div class="card-detail-head">
+        <div class="card-detail-emoji">${sc.emoji}</div>
+        <div class="card-detail-meta">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap">
+            <span class="card-detail-name" style="color:${m.color}">${sc.nom}</span>
+            <span class="tag" style="background:${m.color}18;color:${m.color};border:1px solid ${m.color}44">${m.label}</span>
+          </div>
+          <div class="card-detail-text">${sc.texte}</div>
+          <div class="card-tags">
+            <span class="tag" style="background:rgba(245,197,24,.1);color:var(--gold);border:1px solid rgba(245,197,24,.3)">+${sc.pts} PTS</span>
+            <span class="tag" style="background:rgba(255,255,255,.04);color:var(--dim);border:1px solid var(--border)">⏱ ${sc.t}s</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-orange full-w" style="padding:clamp(10px,2.5vw,13px);font-size:clamp(.8rem,2.4vw,.93rem);margin-top:12px" onclick="playCard()">▶ JOUER CETTE CARTE</button>
+    `;
+    gc.appendChild(detail);
+  }
+}
+
+// ── PLAY ──
+function renderPlay(gc) {
+  const card = state.playedCard;
+  const m = TYPE_META[card.type] || TYPE_META.BONUS;
+  const config = state.lastConfig;
+  const isVsAI = config?.mode === 'vs_ai';
+  const aiPlayer = state.players.find(p => p.isAI);
+  const aiProfile = aiPlayer ? AI_PROFILES[aiPlayer.difficulty || 'medium'] : null;
+
+  // Card display
+  const playCard = document.createElement('div');
+  playCard.className = 'play-card anim-pop';
+  playCard.style.cssText = `background:var(--bg2);border:1.5px solid ${m.color}66;box-shadow:0 0 22px ${m.color}12`;
+  playCard.innerHTML = `
+    <div class="play-head">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:clamp(.95rem,3.8vw,1.6rem)">${card.emoji}</span>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:clamp(.44rem,1.4vw,.56rem);color:${m.color};letter-spacing:.08em">${card.nom}</div>
+          <span class="tag" style="background:${m.color}18;color:${m.color};border:1px solid ${m.color}44;margin-top:2px">${m.label}</span>
+        </div>
+      </div>
+      <div class="timer-wrap" id="timer-wrap">
+        <svg width="44" height="44" style="transform:rotate(-90deg);position:absolute;inset:0">
+          <circle cx="22" cy="22" r="17" fill="none" stroke="var(--bg3)" stroke-width="3"/>
+          <circle id="timer-circle" cx="22" cy="22" r="17" fill="none" stroke="var(--green)" stroke-width="3"
+            stroke-dasharray="${2*Math.PI*17}" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear,stroke .4s"/>
+        </svg>
+        <div class="timer-num" id="timer-num" style="color:var(--green)">${card.t}</div>
+      </div>
+    </div>
+    <div class="play-question">${card.texte}</div>
+  `;
+  gc.appendChild(playCard);
+
+  // AI status
+  if (isVsAI && aiPlayer) {
+    const aiSt = document.createElement('div');
+    aiSt.className = 'ai-status';
+    aiSt.id = 'ai-status-box';
+    aiSt.innerHTML = `
+      <span>🤖</span>
+      <div style="flex:1">
+        <div class="ai-label" style="color:${aiProfile?.color}">IA — ${aiProfile?.label}</div>
+        <div class="ai-state pulse" id="ai-state-text">Réflexion...</div>
+      </div>
+    `;
+    gc.appendChild(aiSt);
+  }
+
+  // Options
+  const optList = document.createElement('div');
+  optList.className = 'options-list';
+  optList.id = 'options-list';
+  card.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn' + (state.chosenOpt === opt ? ' chosen' : '');
+    btn.disabled = !!state.chosenOpt;
+    btn.innerHTML = `<span class="opt-letter" style="color:${m.color}">${String.fromCharCode(65+i)}.</span>${san(opt)}`;
+    btn.onclick = () => chooseOption(opt);
+    optList.appendChild(btn);
+  });
+  gc.appendChild(optList);
+
+  startTimer(card.t, m.color);
+
+  // AI thinking
+  if (isVsAI && aiPlayer && aiProfile && !state.aiChosenOpt) {
+    setTimeout(() => {
+      const ac = Math.random() < aiProfile.accuracy
+        ? card.options[0]
+        : card.options[Math.floor(Math.random() * card.options.length)];
+      state.aiChosenOpt = ac;
+      const aiStateEl = el('ai-state-text');
+      if (aiStateEl) {
+        aiStateEl.textContent = '● Réponse verrouillée';
+        aiStateEl.style.color = 'var(--green)';
+        aiStateEl.classList.remove('pulse');
+      }
+      if (state.chosenOpt) resolveRound();
+    }, aiProfile.reactionMs);
+  }
+}
+
+// ── RESULT ──
+function renderResult(gc) {
+  const { playedCard, players, scores, ptsRound, chosenOpt, aiChosenOpt, round } = state;
+  const config = state.lastConfig;
+  const isVsAI = config?.mode === 'vs_ai';
+  const aiPlayer = players.find(p => p.isAI);
+  const aiProfile = aiPlayer ? AI_PROFILES[aiPlayer.difficulty || 'medium'] : null;
+
+  const myPts = ptsRound[getActivePlayer().id] || 0;
+  const aiPts = aiPlayer ? (ptsRound[aiPlayer.id] || 0) : 0;
+  let resultType = 'done';
+  if (isVsAI && aiPlayer) resultType = myPts > aiPts ? 'win' : myPts < aiPts ? 'lose' : 'draw';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1';
+
+  const card = document.createElement('div');
+  card.className = 'result-card anim-pop';
+  card.style.cssText = `border-color:${resultType==='win'?'var(--green)':resultType==='lose'?'var(--orange)':'var(--border)'};box-shadow:${resultType==='win'?'0 0 28px rgba(34,197,94,.14)':resultType==='lose'?'0 0 28px rgba(249,115,22,.14)':'none'}`;
+
+  const titleColor = resultType === 'win' ? 'var(--green)' : resultType === 'lose' ? 'var(--orange)' : resultType === 'draw' ? 'var(--gold)' : 'var(--white)';
+  const titleText = resultType === 'win' ? 'VICTOIRE !' : resultType === 'lose' ? 'DÉFAITE' : resultType === 'draw' ? 'ÉGALITÉ' : 'RÉSULTAT';
+
+  const ptsGridCols = players.length === 1 ? '1fr' : `repeat(${Math.min(players.length, 3)}, 1fr)`;
+  const ptsCells = players.map(p =>
+    `<div class="pts-cell" style="border:1px solid ${p.color}44">
+      <div class="pts-icon">${p.icon}</div>
+      <div class="pts-name">${san(p.name).slice(0,8)}</div>
+      <div class="pts-val" style="color:${p.color}">+${ptsRound[p.id] || 0}</div>
+      <div class="pts-total">→ ${scores[p.id] || 0}</div>
+    </div>`
+  ).join('');
+
+  const choicesHTML = isVsAI && aiChosenOpt && aiPlayer ? `
+    <div class="choices-box">
+      <div style="font-family:'DM Mono',monospace;font-size:clamp(.4rem,1.2vw,.5rem);color:var(--dim);letter-spacing:.12em;margin-bottom:5px">// CHOIX</div>
+      <div class="choices-row">
+        <div class="choice-item"><div class="choice-who">TOI</div><div class="choice-val" style="color:var(--white)">${san(chosenOpt)}</div></div>
+        <div class="choice-item" style="text-align:right"><div class="choice-who">IA</div><div class="choice-val" style="color:${aiProfile?.color}">${san(aiChosenOpt)}</div></div>
+      </div>
+    </div>` : '';
+
+  const btnText = round >= 10 ? '🏆 RÉSULTATS FINAUX' : '▶ MANCHE SUIVANTE';
+
+  card.innerHTML = `
+    <div class="result-title" style="color:${titleColor}">${titleText}</div>
+    <div class="result-sub">${playedCard.nom} // MANCHE ${round}</div>
+    <div class="pts-grid" style="grid-template-columns:${ptsGridCols}">${ptsCells}</div>
+    ${choicesHTML}
+    <button class="btn btn-orange full-w" style="padding:clamp(10px,2.8vw,14px);font-size:clamp(.8rem,2.5vw,.93rem)" onclick="nextRound()">${btnText}</button>
+  `;
+
+  wrapper.appendChild(card);
+  gc.appendChild(wrapper);
+}
+
+// ── PASS DEVICE ──
+function renderPassDevice(gc) {
+  const p = state.players[state.activeIdx];
+  const div = document.createElement('div');
+  div.className = 'pass-screen';
+  div.innerHTML = `
+    <div class="pass-title">PASSE L'APPAREIL</div>
+    <div class="pass-icon">${p?.icon || '👤'}</div>
+    <div style="font-size:clamp(.82rem,2.8vw,1rem);color:var(--dim);margin-bottom:6px">C'est maintenant au tour de</div>
+    <div class="pass-player" style="color:${p?.color || 'var(--white)'}">${san(p?.name || 'Joueur')}</div>
+    <button class="btn btn-orange" style="padding:clamp(12px,3vw,16px) clamp(24px,6vw,40px);font-size:clamp(.85rem,2.6vw,1rem)" onclick="advanceRound()">▶ JE SUIS PRÊT</button>
+  `;
+  gc.appendChild(div);
+}
+
+// ══════════════════════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════════════════════
+function startTimer(total, accentColor) {
+  stopTimer();
+  state.timerLeft = total;
+  updateTimerDisplay(total, total, accentColor);
+  state.timerInterval = setInterval(() => {
+    state.timerLeft--;
+    updateTimerDisplay(state.timerLeft, total, accentColor);
+    if (state.timerLeft <= 0) {
+      stopTimer();
+      if (state.phase === 'play' && !state.chosenOpt) {
+        chooseOption(state.playedCard.options[0]);
+      }
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay(left, total, accentColor) {
+  const numEl = el('timer-num');
+  const circEl = el('timer-circle');
+  if (!numEl || !circEl) return;
+  const pct = total > 0 ? left / total : 0;
+  const r = 17;
+  const circ = 2 * Math.PI * r;
+  const col = pct > 0.5 ? 'var(--green)' : pct > 0.25 ? 'var(--gold)' : 'var(--orange)';
+  circEl.style.strokeDashoffset = circ * (1 - pct);
+  circEl.style.stroke = col;
+  numEl.textContent = left;
+  numEl.style.color = col;
+}
+
+function stopTimer() {
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+}
+
+// ══════════════════════════════════════════════════════
+// GAME ACTIONS
+// ══════════════════════════════════════════════════════
+function playCard() {
+  if (!state.selectedCard || state.phase !== 'select') return;
+  state.playedCard = state.selectedCard;
+  state.phase = 'play';
+  state.chosenOpt = null;
+  state.aiChosenOpt = null;
+  renderGame();
+}
+
+function chooseOption(opt) {
+  if (state.chosenOpt || state.phase !== 'play') return;
+  stopTimer();
+  state.chosenOpt = opt;
+  // Update button visuals
+  const opts = el('options-list');
+  if (opts) {
+    opts.querySelectorAll('.opt-btn').forEach(btn => {
+      btn.disabled = true;
+      if (btn.textContent.includes(opt)) btn.classList.add('chosen');
+    });
+  }
+  // If AI already chose or solo, resolve
+  const config = state.lastConfig;
+  const isVsAI = config?.mode === 'vs_ai';
+  if (!isVsAI || state.aiChosenOpt) {
+    resolveRound();
+  }
+}
+
+function resolveRound() {
+  const card = state.playedCard;
+  const pts = {};
+  const config = state.lastConfig;
+  const isVsAI = config?.mode === 'vs_ai';
+
+  state.players.filter(p => !p.isAI).forEach(p => {
+    const ok = Math.random() < (card.type === 'DEFI' ? 0.6 : 0.65);
+    const sb = state.streak >= 2 ? 4 : 0;
+    pts[p.id] = ok ? card.pts + sb : Math.max(1, Math.floor(card.pts * 0.15));
+  });
+
+  if (isVsAI) {
+    const aiPlayer = state.players.find(p => p.isAI);
+    if (aiPlayer) {
+      const prof = AI_PROFILES[aiPlayer.difficulty || 'medium'];
+      const ok = Math.random() < prof.accuracy;
+      pts[aiPlayer.id] = ok ? card.pts + (aiPlayer.difficulty === 'elite' ? 3 : 0) : Math.max(1, Math.floor(card.pts * 0.18));
+    }
+  }
+
+  const ap = getActivePlayer();
+  const myPts = pts[ap.id] || 0;
+  const newStreak = myPts >= card.pts * 0.5 ? state.streak + 1 : 0;
+  state.streak = newStreak;
+  if (newStreak === 3) showToast('🔥 STREAK x3 — +4 BONUS !', 'var(--gold)');
+  else if (newStreak >= 5) showToast(`🔥 STREAK x${newStreak} !`, 'var(--orange)');
+
+  state.ptsRound = pts;
+  Object.entries(pts).forEach(([id, p]) => { state.scores[id] = (state.scores[id] || 0) + p; });
+  state.phase = 'result';
+  renderGame();
+}
+
+function nextRound() {
+  if (state.round >= 10) {
+    showResults();
+    return;
+  }
+  const config = state.lastConfig;
+  const isLocal = config?.mode === 'local';
+  const nextIdx = isLocal ? (state.activeIdx + 1) % state.players.length : state.activeIdx;
+  state.activeIdx = nextIdx;
+  if (isLocal && nextIdx !== 0) {
+    state.phase = 'pass_device';
+    renderGame();
+    return;
+  }
+  advanceRound();
+}
+
+function advanceRound() {
+  const prevPlayed = state.playedCard;
+  const prev = state.hand;
+  const wo = prev.filter(c => c.id !== prevPlayed?.id);
+  const avail = CARDS.filter(c => !prev.map(x => x.id).includes(c.id));
+  state.hand = [...wo, ...getRand(avail, 1)];
+  state.selectedCard = null;
+  state.playedCard = null;
+  state.chosenOpt = null;
+  state.aiChosenOpt = null;
+  state.phase = 'select';
+  state.round++;
+  state.ptsRound = {};
+  renderGame();
+}
+
+// ══════════════════════════════════════════════════════
+// RESULTS SCREEN
+// ══════════════════════════════════════════════════════
+function showResults() {
+  const { players, scores } = state;
+  const sorted = [...players].sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
+  const medals = ['🥇','🥈','🥉','🏅','🏅','🏅'];
+  const winner = sorted[0];
+
+  el('result-icon').textContent = winner?.icon || '🏆';
+  el('result-winner').textContent = `${winner?.name || '—'} remporte la victoire !`;
+
+  const rows = el('lb-rows');
+  rows.innerHTML = sorted.map((p, i) =>
+    `<div class="lb-row${i === 0 ? ' first' : ''}">
+      <span class="lb-medal">${medals[i]}</span>
+      <span class="lb-icon">${p.icon}</span>
+      <span class="lb-name${i === 0 ? ' first' : ''}">${san(p.name)}</span>
+      <span class="lb-score" style="color:${p.color}">${scores[p.id] || 0}</span>
+    </div>`
+  ).join('');
+
+  showScreen('screen-result');
+}
+
+function replayGame() {
+  if (state.lastConfig) startGame(state.lastConfig);
+}
+
+// ══════════════════════════════════════════════════════
+// QUIT MODAL
+// ══════════════════════════════════════════════════════
+function showQuitModal() {
+  el('quit-modal').classList.remove('hidden');
+}
+function closeQuitModal() {
+  el('quit-modal').classList.add('hidden');
+}
+function quitGame() {
+  closeQuitModal();
+  stopTimer();
+  fbOff();
+  showScreen('screen-welcome');
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  initWelcome();
+  await initFirebase();
+  cleanOldRooms();
+});
+</script>
+</body>
+</html>
